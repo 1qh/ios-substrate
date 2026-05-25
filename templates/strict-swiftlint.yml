@@ -5,6 +5,7 @@ excluded:
   - "**/DerivedData"
   - "**/Package.swift"
   - "**/*.generated.swift"
+  - "**/build"
 
 disabled_rules:
   - contrasted_opening_brace
@@ -37,11 +38,13 @@ opt_in_rules:
   - async_without_await
   - attribute_name_spacing
   - attributes
+  - balanced_xctest_lifecycle
   - closure_body_length
   - closure_end_indentation
   - closure_spacing
   - collection_alignment
   - comma_inheritance
+  - compiler_protocol_init
   - conditional_returns_on_newline
   - contains_over_filter_count
   - contains_over_filter_is_empty
@@ -49,13 +52,16 @@ opt_in_rules:
   - contains_over_range_nil_comparison
   - convenience_type
   - direct_return
+  - discarded_notification_center_observer
   - discouraged_assert
   - discouraged_none_name
+  - discouraged_object_literal
   - discouraged_optional_boolean
   - discouraged_optional_collection
   - empty_collection_literal
   - empty_count
   - empty_string
+  - empty_xctest_method
   - enum_case_associated_values_count
   - explicit_init
   - explicit_top_level_acl
@@ -68,6 +74,7 @@ opt_in_rules:
   - flatmap_over_map_reduce
   - force_unwrapping
   - function_default_parameter_at_end
+  - ibinspectable_in_extension
   - identical_operands
   - implicit_return
   - implicitly_unwrapped_optional
@@ -98,6 +105,8 @@ opt_in_rules:
   - operator_usage_whitespace
   - optional_data_string_conversion
   - optional_enum_case_matching
+  - overridden_super_call
+  - override_in_extension
   - pattern_matching_keywords
   - period_spacing
   - prefer_condition_list
@@ -111,6 +120,7 @@ opt_in_rules:
   - private_subject
   - private_swiftui_state
   - prohibited_interface_builder
+  - prohibited_super_call
   - raw_value_for_camel_cased_codable_enum
   - reduce_boolean
   - reduce_into
@@ -119,27 +129,38 @@ opt_in_rules:
   - redundant_type_annotation
   - required_enum_case
   - return_value_from_void_function
+  - self_binding
   - shorthand_argument
   - shorthand_optional_binding
+  - single_test_class
   - sorted_enum_cases
   - sorted_first_last
   - sorted_imports
   - static_operator
   - static_over_final_class
   - strict_fileprivate
+  - strong_iboutlet
   - superfluous_else
   - switch_case_on_newline
+  - test_case_accessibility
+  - toggle_bool
   - trailing_closure
   - unavailable_condition
   - unavailable_function
   - unhandled_throwing_task
   - unneeded_escaping
   - unneeded_parentheses_in_closure_argument
+  - unneeded_throws_rethrows
+  - unowned_variable_capture
+  - untyped_error_in_catch
   - unused_parameter
   - vertical_parameter_alignment_on_call
   - vertical_whitespace_between_cases
   - vertical_whitespace_closing_braces
   - vertical_whitespace_opening_braces
+  - void_function_in_ternary
+  - weak_delegate
+  - xct_specific_matcher
   - yoda_condition
 
 analyzer_rules:
