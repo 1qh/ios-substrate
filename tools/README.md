@@ -36,15 +36,19 @@ iosx version --json
 iosx path --json swiftlint-config
 iosx path --json markdownlint-config
 iosx path --json typos-config
+iosx lint run-all --selftest
+iosx lint dead-code --help
+iosx lint swiftformat --version
 ```
 
 Do not call substrate helper files directly from consumer repos. If a generic
 operation is missing from `iosx`, add it to `iosx` first, dogfood it here, then
 consume the command from app repositories.
 
-## `lint/run-all`
+## `iosx lint run-all`
 
-Runs the fast generic quality gates for this package:
+Runs the fast generic quality gates for this package. This is the public command
+form for agents; `tools/lint/run-all` is the implementation behind it:
 
 - `iosx doctor --fast` public fast-loop contract verification.
 - Swift package tests.
@@ -57,22 +61,36 @@ Runs the fast generic quality gates for this package:
 Selectors are available for fast local iteration:
 
 ```sh
-tools/lint/run-all --list-gates
-tools/lint/run-all --only swiftlint
-tools/lint/run-all --from editorconfig
-tools/lint/run-all --after swiftformat
+iosx lint run-all --list-gates
+iosx lint run-all --only swiftlint
+iosx lint run-all --from editorconfig
+iosx lint run-all --after swiftformat
 ```
 
-Final proof uses `tools/lint/run-all` without selectors.
+Final proof uses `iosx lint run-all` without selectors.
 
 Full tooling proof also runs `iosx doctor --all`; it is separate from the fast
 gate because dead-code scanning remains dedicated and on-demand.
 
-## `lint/run-dead-code`
+## `iosx lint dead-code`
 
 Runs the dedicated dead-code gate with Periphery. This is explicit and on-demand, not part of fast `run-all`.
 
-## `lint/run-swift-gates`
+```sh
+iosx lint dead-code --help
+iosx lint dead-code
+```
+
+## `iosx lint swiftformat`
+
+Runs SwiftFormat with the substrate strict config. Consumers should call this
+through `iosx` so formatting policy stays substrate-owned.
+
+```sh
+iosx lint swiftformat --lint Sources Tests
+```
+
+## `iosx lint swift-gates`
 
 Runs the reusable Swift lint bundle: SwiftLint strict, SwiftFormat lint, and
 `no-direct-bundle-config` over the same roots. Consumers may pass a local
@@ -86,7 +104,7 @@ iosx lint swift-gates Sources Tests
 iosx lint swift-gates --swiftlint-overlay .swiftlint.yml App
 ```
 
-## `lint/no-false-green-verify`
+## `iosx lint false-green`
 
 Fails scripts that read `$?` after a pipeline without `set -o pipefail` or
 `PIPESTATUS`. This keeps build, lint, and release verification from passing on
@@ -97,7 +115,7 @@ iosx lint false-green tools Makefile
 iosx lint false-green --selftest
 ```
 
-## `lint/no-direct-ios-helper`
+## `iosx lint no-direct-ios-helper`
 
 Fails consumer Makefiles that reimplement product-neutral iOS helper snippets
 already owned by this substrate: simulator create/boot/list/install/launch/reset/push,
@@ -110,15 +128,15 @@ iosx lint no-direct-ios-helper Makefile tools/make
 iosx lint no-direct-ios-helper --selftest
 ```
 
-## `lint/no-direct-bundle-config`
+## `iosx lint no-direct-bundle-config`
 
 Fails direct Swift `Bundle.main` Info.plist reads. Consumers should expose an
 app-local config facade backed by `InfoDictionaryConfig` instead, so placeholder
 and empty-value semantics stay shared.
 
 ```sh
-tools/lint/no-direct-bundle-config Sources
-tools/lint/no-direct-bundle-config --selftest
+iosx lint no-direct-bundle-config Sources
+iosx lint no-direct-bundle-config --selftest
 ```
 
 ## `iosx device`
@@ -181,7 +199,7 @@ iosx xcode export-options \
 
 Prints installed substrate paths for tools that require a file path. The target
 list is CLI-owned by the command catalog, and smoke tests verify help text, JSON
-discovery, and path responses stay consistent.
+discovery, successful path responses, and JSON failure responses stay consistent.
 
 ```sh
 iosx path root

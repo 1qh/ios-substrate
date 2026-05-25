@@ -255,7 +255,11 @@ path_value() {
   done < <(path_specs)
 
   if [ -z "$value" ]; then
-    usage >&2
+    if [ "$json" = true ]; then
+      printf '{"ok":false,"error":"unknown-path-target","target":"%s"}\n' "$(json_escape "$kind")"
+    else
+      usage >&2
+    fi
     exit 2
   fi
 

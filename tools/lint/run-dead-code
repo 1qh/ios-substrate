@@ -1,6 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+usage() {
+  cat <<'USAGE'
+Usage: tools/lint/run-dead-code [periphery scan args...]
+
+Runs the dedicated on-demand Periphery dead-code gate. This is intentionally
+kept out of the fast run-all loop.
+USAGE
+}
+
+case "${1:-}" in
+  --help | -h)
+    usage
+    exit 0
+    ;;
+esac
+
 command -v periphery >/dev/null || {
   echo "missing required tool: periphery" >&2
   exit 1
@@ -12,5 +28,6 @@ periphery scan \
   --quiet \
   --disable-update-check \
   --relative-results \
+  "$@" \
   -- \
   --disable-sandbox
