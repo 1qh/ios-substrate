@@ -179,7 +179,9 @@ iosx xcode export-options \
 
 ## `iosx path`
 
-Prints installed substrate paths for tools that require a file path.
+Prints installed substrate paths for tools that require a file path. The target
+list is CLI-owned, and smoke tests verify help text, JSON discovery, and path
+responses stay consistent.
 
 ```sh
 iosx path root
