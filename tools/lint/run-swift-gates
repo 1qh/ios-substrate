@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SWIFTLINT_CONFIG="$ROOT/templates/strict-swiftlint.yml"
+SWIFTFORMAT_CONFIG="$ROOT/templates/strict-swiftformat.config"
+ROOTS=()
+
+fail() {
+  printf 'FAIL: %s\n' "$*" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'EOF'
+Usage: tools/lint/run-swift-gates [--swiftlint-config PATH] [--swiftformat-config PATH] <swift-root>...
+
+Runs the reusable Swift gate bundle:
+- SwiftLint strict with the selected config.
+- SwiftFormat --lint with the selected config.
+- no-direct-bundle-config on the same Swift roots.
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --selftest)
+      [ -x "$ROOT/tools/lint/no-direct-bundle-config" ] || fail "missing no-direct-bundle-config"
+      [ -f "$SWIFTLINT_CONFIG" ] || fail "missing default SwiftLint config"
+      [ -f "$SWIFTFORMAT_CONFIG" ] || fail "missing default SwiftFormat config"
+      printf 'ok\n'
+      exit 0
+      ;;
+    --swiftlint-config)
+      [ "$#" -ge 2 ] || fail "--swiftlint-config requires a path"
+      SWIFTLINT_CONFIG="$2"
+      shift 2
+      ;;
+    --swiftlint-config=*)
+      SWIFTLINT_CONFIG="${1#--swiftlint-config=}"
+      shift
+      ;;
+    --swiftformat-config)
+      [ "$#" -ge 2 ] || fail "--swiftformat-config requires a path"
+      SWIFTFORMAT_CONFIG="$2"
+      shift 2
+      ;;
+    --swiftformat-config=*)
+      SWIFTFORMAT_CONFIG="${1#--swiftformat-config=}"
+      shift
+      ;;
+    --help | -h)
+      usage
+      exit 0
+      ;;
+    --*)
+      fail "unknown option: $1"
+      ;;
+    *)
+      ROOTS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+[ "${#ROOTS[@]}" -gt 0 ] || fail "at least one Swift root is required"
+[ -f "$SWIFTLINT_CONFIG" ] || fail "SwiftLint config not found: $SWIFTLINT_CONFIG"
+[ -f "$SWIFTFORMAT_CONFIG" ] || fail "SwiftFormat config not found: $SWIFTFORMAT_CONFIG"
+[ -x "$ROOT/tools/lint/no-direct-bundle-config" ] || fail "missing no-direct-bundle-config"
+command -v swiftlint >/dev/null 2>&1 || fail "missing required tool: swiftlint"
+command -v swiftformat >/dev/null 2>&1 || fail "missing required tool: swiftformat"
+
+for root in "${ROOTS[@]}"; do
+  [ -e "$root" ] || fail "Swift root not found: $root"
+done
+
+swiftlint lint --strict --config "$SWIFTLINT_CONFIG" "${ROOTS[@]}"
+swiftformat --lint --config "$SWIFTFORMAT_CONFIG" "${ROOTS[@]}"
+"$ROOT/tools/lint/no-direct-bundle-config" "${ROOTS[@]}"

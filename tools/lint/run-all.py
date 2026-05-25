@@ -179,18 +179,13 @@ def gates() -> List[Gate]:
     result: List[Gate] = [
         Gate('run-all selector selftest', [str(Path('tools/lint/run-all.py')), '--selftest']),
         Gate('no direct Bundle config selftest', [str(Path('tools/lint/no-direct-bundle-config')), '--selftest']),
+        Gate('Swift gate bundle selftest', [str(Path('tools/lint/run-swift-gates')), '--selftest']),
         Gate('no false-green verify selftest', [str(Path('tools/lint/no-false-green-verify')), '--selftest']),
         Gate(
             'no false-green verify scripts',
             [str(Path('tools/lint/no-false-green-verify')), *shell_files, *make_files],
             applies=has_any(shell_files + make_files),
             reason='no shell or Make files',
-        ),
-        Gate(
-            'no direct Bundle config Swift roots',
-            [str(Path('tools/lint/no-direct-bundle-config')), *swift_roots],
-            applies=has_any(swift_roots),
-            reason='no Swift roots',
         ),
         Gate('swift package tests', ['swift', 'test']),
         Gate(
@@ -206,14 +201,8 @@ def gates() -> List[Gate]:
             reason='no shell scripts',
         ),
         Gate(
-            'swiftlint strict Swift roots',
-            ['swiftlint', 'lint', '--strict', '--config', 'templates/strict-swiftlint.yml', *swift_roots],
-            applies=has_any(swift_roots),
-            reason='no Swift roots',
-        ),
-        Gate(
-            'swiftformat lint Swift roots',
-            ['swiftformat', '--lint', '--config', 'templates/strict-swiftformat.config', *swift_roots],
+            'Swift strict gate bundle',
+            [str(Path('tools/lint/run-swift-gates')), *swift_roots],
             applies=has_any(swift_roots),
             reason='no Swift roots',
         ),

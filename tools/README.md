@@ -28,6 +28,17 @@ Final proof uses `tools/lint/run-all.py` without selectors.
 
 Runs the dedicated dead-code gate with Periphery. This is explicit and on-demand, not part of fast `run-all.py`.
 
+## `lint/run-swift-gates`
+
+Runs the reusable Swift lint bundle: SwiftLint strict, SwiftFormat lint, and
+`no-direct-bundle-config` over the same roots. Consumers may pass local configs
+when generated-code or product rules require an explicit overlay.
+
+```sh
+tools/lint/run-swift-gates Sources Tests
+tools/lint/run-swift-gates --swiftlint-config .swiftlint.yml --swiftformat-config .swiftformat App
+```
+
 ## `lint/no-false-green-verify`
 
 Fails scripts that read `$?` after a pipeline without `set -o pipefail` or
