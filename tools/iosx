@@ -8,11 +8,12 @@ iosx: product-neutral iOS tooling CLI
 
 Commands:
   version
+  commands [--json]
   doctor
   device <ios-device args...>
   sim <ios-sim args...>
   xcode <ios-xcode args...>
-  path root|swiftlint-config|swiftformat-config
+  path [--json] root|swiftlint-config|swiftformat-config
   lint swift-gates <run-swift-gates args...>
   lint swiftformat <swiftformat args...>
   lint false-green <no-false-green-verify args...>
@@ -38,34 +39,122 @@ exec_tool() {
   exec "$tool" "$@"
 }
 
+json_escape() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  printf '%s' "$value"
+}
+
 version() {
   git -C "$ROOT" rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown\n'
 }
 
+required_tool_paths() {
+  cat <<'PATHS'
+tools/ios-device
+tools/ios-sim
+tools/ios-xcode
+tools/lint/run-swift-gates
+tools/lint/no-false-green-verify
+tools/lint/no-direct-ios-helper
+PATHS
+}
+
 doctor() {
-  [ -x "$ROOT/tools/ios-device" ] || fail 'missing tools/ios-device'
-  [ -x "$ROOT/tools/ios-sim" ] || fail 'missing tools/ios-sim'
-  [ -x "$ROOT/tools/ios-xcode" ] || fail 'missing tools/ios-xcode'
-  [ -x "$ROOT/tools/lint/run-swift-gates" ] || fail 'missing tools/lint/run-swift-gates'
-  [ -x "$ROOT/tools/lint/no-false-green-verify" ] || fail 'missing tools/lint/no-false-green-verify'
-  [ -x "$ROOT/tools/lint/no-direct-ios-helper" ] || fail 'missing tools/lint/no-direct-ios-helper'
-  printf 'ok\n'
+  local json="${1:-}"
+  local missing=()
+  local path
+
+  while IFS= read -r path; do
+    [ -x "$ROOT/$path" ] || missing+=("$path")
+  done < <(required_tool_paths)
+
+  if [ "$json" = "--json" ]; then
+    printf '{"ok":'
+    if [ "${#missing[@]}" -eq 0 ]; then
+      printf 'true'
+    else
+      printf 'false'
+    fi
+    printf ',"root":"%s","version":"%s","missing":[' "$(json_escape "$ROOT")" "$(json_escape "$(version)")"
+    local index
+    for index in "${!missing[@]}"; do
+      [ "$index" -eq 0 ] || printf ','
+      printf '"%s"' "$(json_escape "${missing[$index]}")"
+    done
+    printf ']}\n'
+  fi
+
+  if [ "${#missing[@]}" -ne 0 ]; then
+    fail "missing executable: ${missing[0]}"
+  fi
+
+  if [ "$json" != "--json" ]; then
+    printf 'ok\n'
+  fi
 }
 
 path_value() {
+  local json=false
+  if [ "${1:-}" = "--json" ]; then
+    json=true
+    shift
+  fi
+  [ "$#" -eq 1 ] || fail 'path requires exactly one target'
+
+  local kind="${1:-}"
+  local value
   case "${1:-}" in
     root)
-      printf '%s\n' "$ROOT"
+      value="$ROOT"
       ;;
     swiftlint-config)
-      printf '%s\n' "$ROOT/templates/strict-swiftlint.yml"
+      value="$ROOT/templates/strict-swiftlint.yml"
       ;;
     swiftformat-config)
-      printf '%s\n' "$ROOT/templates/strict-swiftformat.config"
+      value="$ROOT/templates/strict-swiftformat.config"
       ;;
     *)
       usage >&2
       exit 2
+      ;;
+  esac
+
+  if [ "$json" = true ]; then
+    printf '{"kind":"%s","path":"%s"}\n' "$(json_escape "$kind")" "$(json_escape "$value")"
+  else
+    printf '%s\n' "$value"
+  fi
+}
+
+commands() {
+  [ "$#" -le 1 ] || fail 'commands accepts at most --json'
+  case "${1:-}" in
+    --json)
+      cat <<'JSON'
+{"commands":[
+  {"name":"doctor","usage":"iosx doctor [--json]","purpose":"verify the installed substrate CLI can find every required reusable helper"},
+  {"name":"version","usage":"iosx version [--json]","purpose":"print the substrate git revision behind this iosx installation"},
+  {"name":"path","usage":"iosx path [--json] root|swiftlint-config|swiftformat-config","purpose":"print canonical paths for tools that require config files"},
+  {"name":"device","usage":"iosx device <subcommand> [args...]","purpose":"run physical-device and LAN discovery helpers"},
+  {"name":"sim","usage":"iosx sim <subcommand> [args...]","purpose":"run simulator boot/install/launch/reset/push helpers"},
+  {"name":"xcode","usage":"iosx xcode <subcommand> [args...]","purpose":"create generic Xcode helper artifacts"},
+  {"name":"lint swift-gates","usage":"iosx lint swift-gates [--swiftlint-overlay .swiftlint.yml] <swift-root>...","purpose":"run the strict reusable Swift lint bundle"},
+  {"name":"lint swiftformat","usage":"iosx lint swiftformat <swiftformat args...>","purpose":"run SwiftFormat with the substrate strict config"},
+  {"name":"lint false-green","usage":"iosx lint false-green <path>...","purpose":"reject verification scripts that can hide pipeline failures"},
+  {"name":"lint no-direct-ios-helper","usage":"iosx lint no-direct-ios-helper <path>...","purpose":"reject copied generic iOS helper logic in consumer repos"},
+  {"name":"lint run-all","usage":"iosx lint run-all [selector args...]","purpose":"run the substrate fast gate suite"},
+  {"name":"lint dead-code","usage":"iosx lint dead-code [args...]","purpose":"run the dedicated on-demand dead-code gate"}
+]}
+JSON
+      ;;
+    "")
+      usage
+      ;;
+    *)
+      fail 'commands only accepts --json'
       ;;
   esac
 }
@@ -73,13 +162,39 @@ path_value() {
 case "${1:-}" in
   version)
     shift
-    [ "$#" -eq 0 ] || fail 'version does not accept options'
-    version
+    case "${1:-}" in
+      --json)
+        shift
+        [ "$#" -eq 0 ] || fail 'version --json does not accept extra options'
+        printf '{"version":"%s"}\n' "$(json_escape "$(version)")"
+        ;;
+      "")
+        version
+        ;;
+      *)
+        fail 'version only accepts --json'
+        ;;
+    esac
+    ;;
+  commands)
+    shift
+    commands "$@"
     ;;
   doctor)
     shift
-    [ "$#" -eq 0 ] || fail 'doctor does not accept options'
-    doctor
+    case "${1:-}" in
+      --json)
+        [ "$#" -eq 1 ] || fail 'doctor --json does not accept extra options'
+        doctor "$@"
+        ;;
+      "")
+        [ "$#" -eq 0 ] || fail 'doctor does not accept options'
+        doctor "$@"
+        ;;
+      *)
+        fail 'doctor only accepts --json'
+        ;;
+    esac
     ;;
   device)
     shift

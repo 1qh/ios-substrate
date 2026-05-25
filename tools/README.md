@@ -2,10 +2,12 @@
 
 Product-neutral command line helpers for iOS app repositories. The daily command is `iosx`.
 
-The public contract is the `iosx` command. Current gate runner
-internals use Python only as local developer tooling, and the substrate gates
-compile and lint those scripts before consumer repos inherit them. Consumer app
-runtimes stay Swift/native and do not depend on Python.
+The public contract is the `iosx` command. It is optimized for coding agents:
+commands are deterministic, failures name the missing tool or contract, and
+discovery commands support JSON where agents need stable parsing. Current gate
+runner internals use Python only as local developer tooling, and the substrate
+gates compile and lint those scripts before consumer repos inherit them.
+Consumer app runtimes stay Swift/native and do not depend on Python.
 
 ## Install
 
@@ -17,6 +19,21 @@ iosx doctor
 ```
 
 Consumer repos should depend on `iosx`, not a checkout-relative tool path.
+
+## Agent contract
+
+Future sessions should learn and use one command:
+
+```sh
+iosx commands --json
+iosx doctor --json
+iosx version --json
+iosx path --json swiftlint-config
+```
+
+Do not call substrate helper files directly from consumer repos. If a generic
+operation is missing from `iosx`, add it to `iosx` first, dogfood it here, then
+consume the command from app repositories.
 
 ## `lint/run-all`
 
@@ -48,13 +65,14 @@ Runs the dedicated dead-code gate with Periphery. This is explicit and on-demand
 
 Runs the reusable Swift lint bundle: SwiftLint strict, SwiftFormat lint, and
 `no-direct-bundle-config` over the same roots. Consumers may pass a local
-SwiftLint overlay when product rules are required; the overlay should inherit
-`templates/strict-swiftlint.yml` with `parent_config`. Consumers should use the
-substrate SwiftFormat config unless a product-only formatting rule is required.
+SwiftLint overlay when product rules are required. The overlay contains
+product-only rules; `iosx` composes it over the substrate strict floor at
+runtime. Consumers should use the substrate SwiftFormat config unless a
+product-only formatting rule is required.
 
 ```sh
-tools/lint/run-swift-gates Sources Tests
-tools/lint/run-swift-gates --swiftlint-config .swiftlint.yml App
+iosx lint swift-gates Sources Tests
+iosx lint swift-gates --swiftlint-overlay .swiftlint.yml App
 ```
 
 ## `lint/no-false-green-verify`
@@ -64,8 +82,8 @@ Fails scripts that read `$?` after a pipeline without `set -o pipefail` or
 formatter/log-tail exit codes.
 
 ```sh
-tools/lint/no-false-green-verify tools Makefile
-tools/lint/no-false-green-verify --selftest
+iosx lint false-green tools Makefile
+iosx lint false-green --selftest
 ```
 
 ## `lint/no-direct-ios-helper`
@@ -76,8 +94,8 @@ ad-hoc simulator app signing, physical-device install/launch/discovery, LAN URL
 discovery, and generic ExportOptions plist writing.
 
 ```sh
-tools/lint/no-direct-ios-helper Makefile tools/make
-tools/lint/no-direct-ios-helper --selftest
+iosx lint no-direct-ios-helper Makefile tools/make
+iosx lint no-direct-ios-helper --selftest
 ```
 
 ## `lint/no-direct-bundle-config`
