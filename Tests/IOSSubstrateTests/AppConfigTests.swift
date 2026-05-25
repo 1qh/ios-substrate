@@ -30,3 +30,38 @@ internal func `telemetry absence is off`() {
     #expect(config.sentryEnabled == false)
     #expect(config.analyticsEnabled == false)
 }
+
+@Test
+internal func `info dictionary config trims required string values`() throws {
+    let config = InfoDictionaryConfig(values: ["APP_NAME": " Example "])
+    #expect(try config.requiredString("APP_NAME") == "Example")
+}
+
+@Test
+internal func `info dictionary config parses explicit booleans`() throws {
+    let config = InfoDictionaryConfig(dictionary: ["FEATURE_ON": "yes", "FEATURE_OFF": 0])
+    #expect(try config.bool("FEATURE_ON") == true)
+    #expect(try config.bool("FEATURE_OFF", default: true) == false)
+}
+
+@Test
+internal func `info dictionary config rejects malformed booleans`() throws {
+    let config = InfoDictionaryConfig(values: ["FEATURE": "sometimes"])
+    #expect(throws: SubstrateConfigError.invalidValue(name: "FEATURE", reason: "expected boolean")) {
+        _ = try config.bool("FEATURE")
+    }
+}
+
+@Test
+internal func `info dictionary config validates required URLs`() throws {
+    let config = InfoDictionaryConfig(values: ["API_BASE": "https://example.test"])
+    #expect(try config.requiredURL("API_BASE").host() == "example.test")
+}
+
+@Test
+internal func `info dictionary config rejects URLs without allowed origin`() throws {
+    let config = InfoDictionaryConfig(values: ["API_BASE": "file:///tmp/data.json"])
+    #expect(throws: SubstrateConfigError.invalidURL("API_BASE requires URL with allowed scheme")) {
+        _ = try config.requiredURL("API_BASE")
+    }
+}

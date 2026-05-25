@@ -2,12 +2,16 @@ import Foundation
 
 public enum SubstrateConfigError: Error, Equatable, CustomStringConvertible, Sendable {
     case invalidURL(String)
+    case invalidValue(name: String, reason: String)
     case missingValue(String)
 
     public var description: String {
         switch self {
         case let .invalidURL(reason):
             "Invalid URL config: \(reason)"
+
+        case let .invalidValue(name, reason):
+            "Invalid config value for \(name): \(reason)"
 
         case let .missingValue(name):
             "Missing required config: \(name)"
