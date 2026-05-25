@@ -22,3 +22,6 @@ indent_size = 2
 
 [tools/lint/run-dead-code]
 indent_size = 2
+
+[tools/lint/no-direct-bundle-config]
+indent_size = 2

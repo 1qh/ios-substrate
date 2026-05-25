@@ -16,5 +16,8 @@ override/super-call, ownership, optional, force-use, raw-value, and type-safety
 rules. The SwiftFormat baseline owns deterministic layout and keeps formatter
 strictness enforced.
 
+`tools/lint/no-direct-bundle-config` owns launch-config access strictness:
+consumer Swift code reads app-local config facades, not raw bundle dictionaries.
+
 Consumers copy these files only as app-level configuration. Reusable Swift code stays in package targets.
 App names, bundle identifiers, backend hosts, tester lists, and product behavior stay outside these templates.

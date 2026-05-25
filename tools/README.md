@@ -27,6 +27,17 @@ Final proof uses `tools/lint/run-all.py` without selectors.
 
 Runs the dedicated dead-code gate with Periphery. This is explicit and on-demand, not part of fast `run-all.py`.
 
+## `lint/no-direct-bundle-config`
+
+Fails direct Swift `Bundle.main` Info.plist reads. Consumers should expose an
+app-local config facade backed by `InfoDictionaryConfig` instead, so placeholder
+and empty-value semantics stay shared.
+
+```sh
+tools/lint/no-direct-bundle-config Sources
+tools/lint/no-direct-bundle-config --selftest
+```
+
 ## `ios-device`
 
 Owns local device, simulator, LAN URL, and signing identity discovery.

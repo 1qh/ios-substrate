@@ -178,6 +178,7 @@ def gates() -> List[Gate]:
 
     result: List[Gate] = [
         Gate('run-all selector selftest', [str(Path('tools/lint/run-all.py')), '--selftest']),
+        Gate('no direct Bundle config selftest', [str(Path('tools/lint/no-direct-bundle-config')), '--selftest']),
         Gate('swift package tests', ['swift', 'test']),
         Gate(
             'shellcheck product-neutral scripts',

@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ALLOW_TOKEN="substrate-allow-direct-bundle-config"
+PATTERN='Bundle[.]main[.](object[(]forInfoDictionaryKey:|infoDictionary)'
+
+fail() {
+  printf 'FAIL: %s\n' "$*" >&2
+  exit 1
+}
+
+scan_path() {
+  local root="$1"
+  [ -e "$root" ] || fail "path not found: $root"
+  if [ -f "$root" ]; then
+    case "$root" in
+      *.swift) scan_file "$root" ;;
+    esac
+    return
+  fi
+  find "$root" \
+    \( -path '*/.git' -o -path '*/.build' -o -path '*/DerivedData' -o -path '*/build' \) -prune \
+    -o -type f -name '*.swift' -print | while IFS= read -r file; do
+    scan_file "$file"
+  done
+}
+
+scan_file() {
+  local file="$1"
+  local matches
+  matches="$(grep -nE "$PATTERN" "$file" || true)"
+  [ -n "$matches" ] || return 0
+  while IFS= read -r match; do
+    [ -n "$match" ] || continue
+    case "$match" in
+      *"$ALLOW_TOKEN"*) continue ;;
+    esac
+    printf '%s:%s\n' "$file" "$match" >&2
+    FOUND=1
+  done <<EOF_MATCHES
+$matches
+EOF_MATCHES
+}
+
+selftest() {
+  local tmp
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' RETURN
+  cat >"$tmp/good.swift" <<'SWIFT'
+import Foundation
+let key = AppConfig.apiKey
+SWIFT
+  cat >"$tmp/allowed.swift" <<'SWIFT'
+import Foundation
+let value = Bundle.main.infoDictionary?["KEY"] // substrate-allow-direct-bundle-config
+SWIFT
+  cat >"$tmp/bad.swift" <<'SWIFT'
+import Foundation
+let value = Bundle.main.object(forInfoDictionaryKey: "KEY")
+SWIFT
+  FOUND=0
+  scan_path "$tmp/good.swift"
+  scan_path "$tmp/allowed.swift"
+  [ "$FOUND" = 0 ] || fail "selftest clean fixture failed"
+  FOUND=0
+  scan_path "$tmp/bad.swift" 2>/dev/null || true
+  [ "$FOUND" = 1 ] || fail "selftest bad fixture was not detected"
+  printf 'ok\n'
+}
+
+if [ "${1-}" = "--selftest" ]; then
+  selftest
+  exit 0
+fi
+
+[ "$#" -gt 0 ] || fail "usage: $0 [--selftest] <swift-file-or-directory>..."
+FOUND=0
+for path in "$@"; do
+  scan_path "$path"
+done
+[ "$FOUND" = 0 ] || fail "direct Bundle.main Info.plist reads must go through an app-local config facade backed by InfoDictionaryConfig"
+printf 'ok\n'
