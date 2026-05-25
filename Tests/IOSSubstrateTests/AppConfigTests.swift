@@ -74,3 +74,55 @@ internal func `info dictionary config rejects URLs without allowed origin`() thr
         _ = try config.requiredURL("API_BASE")
     }
 }
+
+@Test
+internal func `debug backend override uses canonical storage key`() throws {
+    #expect(DebugBackendOverrideStore.defaultStorageKey == "dev.backendOverrideURL")
+    let store = InMemoryKeyValueStore()
+    let overrides = try DebugBackendOverrideStore(store: store)
+    let url = try #require(URL(string: "https://local.example.test"))
+    overrides.save(url)
+
+    #expect(store.string(forKey: DebugBackendOverrideStore.defaultStorageKey) == "https://local.example.test")
+    #expect(try overrides.loadURL() == url)
+}
+
+@Test
+internal func `debug backend override treats empty and placeholder values as absent`() throws {
+    let store = InMemoryKeyValueStore()
+    let overrides = try DebugBackendOverrideStore(store: store)
+
+    store.setString(" ", forKey: DebugBackendOverrideStore.defaultStorageKey)
+    #expect(try overrides.loadURL() == nil)
+
+    store.setString("$(DEV_BACKEND)", forKey: DebugBackendOverrideStore.defaultStorageKey)
+    #expect(try overrides.loadURL() == nil)
+}
+
+@Test
+internal func `debug backend override rejects non origin URLs`() throws {
+    let store = InMemoryKeyValueStore()
+    let overrides = try DebugBackendOverrideStore(store: store)
+    store.setString("file:///tmp/data.json", forKey: DebugBackendOverrideStore.defaultStorageKey)
+
+    #expect(throws: SubstrateConfigError
+        .invalidURL("\(DebugBackendOverrideStore.defaultStorageKey) requires URL with allowed scheme")) {
+        _ = try overrides.loadURL()
+    }
+}
+
+internal final class InMemoryKeyValueStore: KeyValueStore, @unchecked Sendable {
+    private var values = [String: String]()
+
+    internal func string(forKey key: String) -> String? {
+        values[key]
+    }
+
+    internal func setString(_ value: String, forKey key: String) {
+        values[key] = value
+    }
+
+    internal func removeObject(forKey key: String) {
+        values.removeValue(forKey: key)
+    }
+}
