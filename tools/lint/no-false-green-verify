@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""Fail shell/make scripts that read `$?` after a pipe without pipefail.
+
+A command like `xcodebuild ... | xcbeautify; rc=$?` captures the formatter's
+exit code, not xcodebuild's. Valid forms use `set -o pipefail`, PIPESTATUS /
+pipestatus, or capture the command result before showing filtered output.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import pathlib
+import re
+import sys
+
+PIPE_SINK = re.compile(r"\|\s*(?:tail|head|grep|rg|xcbeautify|sed|awk|cat|tee|sort|uniq|wc)\b")
+HAS_PIPEFAIL = re.compile(r"set\s+-[A-Za-z]*o[A-Za-z]*\s+pipefail|set\s+-o\s+pipefail")
+HAS_PIPESTATUS = re.compile(r"PIPESTATUS|pipestatus")
+ALLOW = re.compile(r"(?:#|//)\s*false-green-verify-allow:")
+SCAN_EXTENSIONS = {".sh", ".bash", ".mk"}
+SCAN_NAMES = {"Makefile"}
+SKIP_DIRS = {".git", ".build", ".swiftpm", "build", "DerivedData", "node_modules"}
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Detect false-green shell verification pipelines.")
+    parser.add_argument("paths", nargs="*", default=["."], help="files or directories to scan")
+    parser.add_argument("--selftest", action="store_true", help="run matcher selftest")
+    return parser.parse_args()
+
+
+def scan_text(text: str) -> list[int]:
+    if HAS_PIPEFAIL.search(text) or HAS_PIPESTATUS.search(text):
+        return []
+    lines = text.splitlines()
+    hits: list[int] = []
+    for index, line in enumerate(lines):
+        if not PIPE_SINK.search(line):
+            continue
+        previous = lines[index - 1] if index > 0 else ""
+        if ALLOW.search(line) or ALLOW.search(previous):
+            continue
+        for offset in range(3):
+            if index + offset >= len(lines):
+                break
+            candidate = lines[index + offset]
+            if HAS_PIPESTATUS.search(candidate):
+                break
+            if "$?" in candidate or "$(?)" in candidate:
+                hits.append(index + 1)
+                break
+    return hits
+
+
+def selftest() -> None:
+    bad = "bun lint.ts 2>&1 | tail -3\necho \"rc=$?\"\n"
+    good_pipefail = "set -o pipefail\nbun lint.ts | tail -3\necho \"rc=$?\"\n"
+    good_redirect = "bun lint.ts > /tmp/l 2>&1\nrc=$?\ntail -3 /tmp/l\n"
+    good_pipestatus = "bun lint.ts | tail -3\nrc=${PIPESTATUS[0]}\n"
+    checks = [
+        len(scan_text(bad)) == 1,
+        len(scan_text(good_pipefail)) == 0,
+        len(scan_text(good_redirect)) == 0,
+        len(scan_text(good_pipestatus)) == 0,
+    ]
+    if not all(checks):
+        print("FAIL: no-false-green-verify selftest failed", file=sys.stderr)
+        sys.exit(1)
+    print("ok")
+
+
+def should_scan(path: pathlib.Path) -> bool:
+    return path.name in SCAN_NAMES or path.suffix in SCAN_EXTENSIONS
+
+
+def walk_path(path: pathlib.Path) -> list[pathlib.Path]:
+    if path.is_file():
+        return [path] if should_scan(path) else []
+    if not path.is_dir():
+        return []
+    files: list[pathlib.Path] = []
+    for root, dirs, names in os.walk(path):
+        dirs[:] = [directory for directory in dirs if directory not in SKIP_DIRS and not directory.startswith(".")]
+        root_path = pathlib.Path(root)
+        for name in names:
+            candidate = root_path / name
+            if should_scan(candidate):
+                files.append(candidate)
+    return files
+
+
+def main() -> None:
+    args = parse_args()
+    if args.selftest:
+        selftest()
+        return
+
+    files: list[pathlib.Path] = []
+    for raw_path in args.paths:
+        files.extend(walk_path(pathlib.Path(raw_path)))
+    files = sorted(set(files))
+
+    findings: list[str] = []
+    for file in files:
+        try:
+            text = file.read_text(errors="ignore")
+        except OSError:
+            continue
+        for line in scan_text(text):
+            findings.append(f"{file}:{line}")
+
+    if not findings:
+        print("ok")
+        return
+
+    print(
+        "FAIL: no-false-green-verify — `$?` read after a pipe without pipefail/PIPESTATUS:",
+        file=sys.stderr,
+    )
+    for finding in findings:
+        print(
+            f"  {finding} — add 'set -o pipefail', use PIPESTATUS, or capture rc before piping output",
+            file=sys.stderr,
+        )
+    sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

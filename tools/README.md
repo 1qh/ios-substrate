@@ -9,6 +9,7 @@ Runs the fast generic quality gates for this package:
 - Swift package tests.
 - shellcheck and shfmt for shell scripts.
 - SwiftLint strict, SwiftFormat lint, and shared launch-config access checks for Swift roots.
+- false-green shell verification checks for scripts and Makefiles.
 - editorconfig, typos, YAML, TOML, JSON, markdown, and offline markdown link checks.
 - product-neutrality scan for terms that belong in consumer apps.
 
@@ -26,6 +27,17 @@ Final proof uses `tools/lint/run-all.py` without selectors.
 ## `lint/run-dead-code`
 
 Runs the dedicated dead-code gate with Periphery. This is explicit and on-demand, not part of fast `run-all.py`.
+
+## `lint/no-false-green-verify`
+
+Fails scripts that read `$?` after a pipeline without `set -o pipefail` or
+`PIPESTATUS`. This keeps build, lint, and release verification from passing on
+formatter/log-tail exit codes.
+
+```sh
+tools/lint/no-false-green-verify tools Makefile
+tools/lint/no-false-green-verify --selftest
+```
 
 ## `lint/no-direct-bundle-config`
 

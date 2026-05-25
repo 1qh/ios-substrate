@@ -179,6 +179,13 @@ def gates() -> List[Gate]:
     result: List[Gate] = [
         Gate('run-all selector selftest', [str(Path('tools/lint/run-all.py')), '--selftest']),
         Gate('no direct Bundle config selftest', [str(Path('tools/lint/no-direct-bundle-config')), '--selftest']),
+        Gate('no false-green verify selftest', [str(Path('tools/lint/no-false-green-verify')), '--selftest']),
+        Gate(
+            'no false-green verify scripts',
+            [str(Path('tools/lint/no-false-green-verify')), *shell_files, *make_files],
+            applies=has_any(shell_files + make_files),
+            reason='no shell or Make files',
+        ),
         Gate(
             'no direct Bundle config Swift roots',
             [str(Path('tools/lint/no-direct-bundle-config')), *swift_roots],
