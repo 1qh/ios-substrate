@@ -42,6 +42,7 @@ consume the command from app repositories.
 
 Runs the fast generic quality gates for this package:
 
+- `iosx doctor` public contract verification.
 - Swift package tests.
 - shellcheck and shfmt for shell scripts.
 - SwiftLint strict, SwiftFormat lint, and shared launch-config access checks for Swift roots.
