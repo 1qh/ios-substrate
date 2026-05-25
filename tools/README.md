@@ -8,7 +8,7 @@ Runs the fast generic quality gates for this package:
 
 - Swift package tests.
 - shellcheck and shfmt for shell scripts.
-- SwiftLint strict and SwiftFormat lint for Swift roots.
+- SwiftLint strict, SwiftFormat lint, and shared launch-config access checks for Swift roots.
 - editorconfig, typos, YAML, TOML, JSON, markdown, and offline markdown link checks.
 - product-neutrality scan for terms that belong in consumer apps.
 
