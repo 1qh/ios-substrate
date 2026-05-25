@@ -1,0 +1,13 @@
+{
+  "displayName": "Example",
+  "bundleIdentifier": "com.example.app",
+  "urlScheme": "example",
+  "backendBaseURL": "https://api.example.com",
+  "appStoreAppID": "",
+  "betaGroupName": "",
+  "autoInviteTesters": false,
+  "telemetry": {
+    "sentryDSN": "",
+    "analyticsAPIKey": ""
+  }
+}
