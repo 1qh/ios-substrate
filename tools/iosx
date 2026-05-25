@@ -51,14 +51,24 @@ version() {
   git -C "$ROOT" rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown\n'
 }
 
-required_tool_paths() {
+required_executable_paths() {
   cat <<'PATHS'
 tools/ios-device
 tools/ios-sim
 tools/ios-xcode
 tools/lint/run-swift-gates
 tools/lint/no-false-green-verify
+tools/lint/no-direct-bundle-config
 tools/lint/no-direct-ios-helper
+tools/lint/run-all
+tools/lint/run-dead-code
+PATHS
+}
+
+required_file_paths() {
+  cat <<'PATHS'
+templates/strict-swiftlint.yml
+templates/strict-swiftformat.config
 PATHS
 }
 
@@ -69,7 +79,11 @@ doctor() {
 
   while IFS= read -r path; do
     [ -x "$ROOT/$path" ] || missing+=("$path")
-  done < <(required_tool_paths)
+  done < <(required_executable_paths)
+
+  while IFS= read -r path; do
+    [ -f "$ROOT/$path" ] || missing+=("$path")
+  done < <(required_file_paths)
 
   if [ "$json" = "--json" ]; then
     printf '{"ok":'
@@ -144,6 +158,7 @@ commands() {
   {"name":"lint swift-gates","usage":"iosx lint swift-gates [--swiftlint-overlay .swiftlint.yml] <swift-root>...","purpose":"run the strict reusable Swift lint bundle"},
   {"name":"lint swiftformat","usage":"iosx lint swiftformat <swiftformat args...>","purpose":"run SwiftFormat with the substrate strict config"},
   {"name":"lint false-green","usage":"iosx lint false-green <path>...","purpose":"reject verification scripts that can hide pipeline failures"},
+  {"name":"lint no-direct-bundle-config","usage":"iosx lint no-direct-bundle-config <swift-root>...","purpose":"reject direct Bundle.main Info.plist reads in Swift code"},
   {"name":"lint no-direct-ios-helper","usage":"iosx lint no-direct-ios-helper <path>...","purpose":"reject copied generic iOS helper logic in consumer repos"},
   {"name":"lint run-all","usage":"iosx lint run-all [selector args...]","purpose":"run the substrate fast gate suite"},
   {"name":"lint dead-code","usage":"iosx lint dead-code [args...]","purpose":"run the dedicated on-demand dead-code gate"}

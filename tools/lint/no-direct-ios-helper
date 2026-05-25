@@ -14,54 +14,54 @@ SKIP_DIRS = {".git", ".build", ".swiftpm", "build", "DerivedData", "node_modules
 SCAN_NAMES = {"Makefile"}
 SCAN_EXTENSIONS = {".mk", ".sh"}
 PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
-    ("direct simulator boot", re.compile(r"\bxcrun\s+simctl\s+boot\b"), "tools/ios-sim boot-wait"),
-    ("direct simulator install", re.compile(r"\bxcrun\s+simctl\s+install\b"), "tools/ios-sim install-launch"),
-    ("direct simulator launch", re.compile(r"\bxcrun\s+simctl\s+launch\b"), "tools/ios-sim install-launch"),
-    ("direct simulator terminate", re.compile(r"\bxcrun\s+simctl\s+terminate\b"), "tools/ios-sim terminate"),
-    ("direct simulator uninstall", re.compile(r"\bxcrun\s+simctl\s+uninstall\b"), "tools/ios-sim uninstall"),
+    ("direct simulator boot", re.compile(r"\bxcrun\s+simctl\s+boot\b"), "iosx sim boot-wait"),
+    ("direct simulator install", re.compile(r"\bxcrun\s+simctl\s+install\b"), "iosx sim install-launch"),
+    ("direct simulator launch", re.compile(r"\bxcrun\s+simctl\s+launch\b"), "iosx sim install-launch"),
+    ("direct simulator terminate", re.compile(r"\bxcrun\s+simctl\s+terminate\b"), "iosx sim terminate"),
+    ("direct simulator uninstall", re.compile(r"\bxcrun\s+simctl\s+uninstall\b"), "iosx sim uninstall"),
     (
         "direct simulator reset",
         re.compile(r"\bxcrun\s+simctl\s+(?:shutdown\s+all|erase\s+all)\b"),
-        "tools/ios-sim nuke-all",
+        "iosx sim nuke-all",
     ),
-    ("direct simulator keychain reset", re.compile(r"\bxcrun\s+simctl\s+keychain\b"), "tools/ios-sim keychain-reset"),
-    ("direct simulator push", re.compile(r"\bxcrun\s+simctl\s+push\b"), "tools/ios-sim push"),
-    ("direct simulator list", re.compile(r"\bxcrun\s+simctl\s+list\s+devices\b"), "tools/ios-sim list-devices"),
-    ("direct simulator logs", re.compile(r"\bxcrun\s+simctl\s+spawn\b"), "tools/ios-sim log-show/log-stream"),
-    ("direct simulator privacy", re.compile(r"\bxcrun\s+simctl\s+privacy\b"), "tools/ios-sim privacy"),
-    ("direct simulator location", re.compile(r"\bxcrun\s+simctl\s+location\b"), "tools/ios-sim location"),
-    ("direct simulator UI", re.compile(r"\bxcrun\s+simctl\s+ui\b"), "tools/ios-sim ui"),
+    ("direct simulator keychain reset", re.compile(r"\bxcrun\s+simctl\s+keychain\b"), "iosx sim keychain-reset"),
+    ("direct simulator push", re.compile(r"\bxcrun\s+simctl\s+push\b"), "iosx sim push"),
+    ("direct simulator list", re.compile(r"\bxcrun\s+simctl\s+list\s+devices\b"), "iosx sim list-devices"),
+    ("direct simulator logs", re.compile(r"\bxcrun\s+simctl\s+spawn\b"), "iosx sim log-show/log-stream"),
+    ("direct simulator privacy", re.compile(r"\bxcrun\s+simctl\s+privacy\b"), "iosx sim privacy"),
+    ("direct simulator location", re.compile(r"\bxcrun\s+simctl\s+location\b"), "iosx sim location"),
+    ("direct simulator UI", re.compile(r"\bxcrun\s+simctl\s+ui\b"), "iosx sim ui"),
     (
         "direct simulator app container",
         re.compile(r"\bxcrun\s+simctl\s+get_app_container\b"),
-        "tools/ios-sim app-container",
+        "iosx sim app-container",
     ),
-    ("direct ad-hoc app signing", re.compile(r"\bcodesign\s+--force\s+--sign\s+-\b"), "tools/ios-sim codesign-app"),
+    ("direct ad-hoc app signing", re.compile(r"\bcodesign\s+--force\s+--sign\s+-\b"), "iosx sim install"),
     (
         "direct device install",
         re.compile(r"\bxcrun\s+devicectl\s+device\s+install\s+app\b"),
-        "tools/ios-device install-launch",
+        "iosx device install-launch",
     ),
     (
         "direct device launch",
         re.compile(r"\bxcrun\s+devicectl\s+device\s+process\s+launch\b"),
-        "tools/ios-device install-launch",
+        "iosx device install-launch",
     ),
     (
         "direct device discovery",
         re.compile(r"\bxcrun\s+devicectl\s+list\s+devices\b"),
-        "tools/ios-device physical-device-udid/list-devices",
+        "iosx device physical-device-udid/list-devices",
     ),
     (
         "direct device app inspection",
         re.compile(r"\bxcrun\s+devicectl\s+device\s+info\s+apps\b"),
-        "tools/ios-device app-info",
+        "iosx device app-info",
     ),
-    ("direct LAN discovery", re.compile(r"\bipconfig\s+getifaddr\b"), "tools/ios-device lan-url"),
+    ("direct LAN discovery", re.compile(r"\bipconfig\s+getifaddr\b"), "iosx device lan-url"),
     (
         "inline export options plist",
         re.compile(r"<key>method</key><string>app-store-connect</string>"),
-        "tools/ios-xcode export-options",
+        "iosx xcode export-options",
     ),
 ]
 
@@ -124,7 +124,16 @@ def selftest() -> None:
         "\t@$(IOS_SIM_TOOL) list-devices\n"
     )
     export_bad = "\t@echo '<key>method</key><string>app-store-connect</string>' > /tmp/ExportOptions.plist\n"
-    checks = [len(scan_text(bad)) == 3, len(scan_text(good)) == 0, len(scan_text(export_bad)) == 1]
+    bad_findings = scan_text(bad)
+    export_findings = scan_text(export_bad)
+    all_findings = bad_findings + export_findings
+    checks = [
+        len(bad_findings) == 3,
+        len(scan_text(good)) == 0,
+        len(export_findings) == 1,
+        all("iosx " in finding for finding in all_findings),
+        all("tools/ios-" not in finding for finding in all_findings),
+    ]
     if not all(checks):
         print("FAIL: no-direct-ios-helper selftest failed", file=sys.stderr)
         sys.exit(1)
