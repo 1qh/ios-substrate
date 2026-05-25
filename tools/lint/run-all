@@ -77,6 +77,10 @@ def selected_gates(gates: list[Gate], args: argparse.Namespace):
     return selected
 
 
+def selected_applicable_count(gates: list[Gate], args: argparse.Namespace) -> int:
+    return sum(1 for _, gate in selected_gates(gates, args) if gate.applies)
+
+
 def run(command: list[str]) -> None:
     tool = command[0]
     if shutil.which(tool) is None:
@@ -139,16 +143,26 @@ if violations:
 
 
 def selftest() -> None:
-    cases = [
+    match_cases = [
         ('3', 3, 'swiftlint lint --strict', True),
         ('3', 13, 'markdownlint-cli2', False),
         ('swiftlint', 3, 'swiftlint lint --strict', True),
         ('swiftlint', 4, 'swiftformat --lint', False),
     ]
-    failed = [case for case in cases if gate_matches(case[0], case[1], case[2]) != case[3]]
+    failed = [case for case in match_cases if gate_matches(case[0], case[1], case[2]) != case[3]]
     missing_args = argparse.Namespace(only='missing-gate', from_gate=None, after=None)
     if selected_gates([Gate('first', ['true'])], missing_args):
         failed.append(('missing-gate', 1, 'first', False))
+    non_applicable_args = argparse.Namespace(only='optional', from_gate=None, after=None)
+    non_applicable_gates = [
+        Gate('optional gate', ['true'], applies=False, reason='not applicable'),
+    ]
+    if selected_applicable_count(non_applicable_gates, non_applicable_args) != 0:
+        failed.append(('optional', 1, 'optional gate', False))
+    applicable_args = argparse.Namespace(only='real', from_gate=None, after=None)
+    applicable_gates = [Gate('real gate', ['true'])]
+    if selected_applicable_count(applicable_gates, applicable_args) != 1:
+        failed.append(('real', 1, 'real gate', True))
     if failed:
         print('FAIL: selector selftest failed', file=sys.stderr)
         for selector, index, label, expected in failed:
