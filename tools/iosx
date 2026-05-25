@@ -7,22 +7,14 @@ usage() {
 iosx: product-neutral iOS tooling CLI
 
 Commands:
-  version
-  commands [--json]
-  doctor [--fast|--all] [--json]
-  device <ios-device args...>
-  sim <ios-sim args...>
-  xcode <ios-xcode args...>
 USAGE
-  printf '  path [--json] %s\n' "$(path_usage_targets)"
+  local _name
+  local command_usage
+  local _purpose
+  while IFS=$'\t' read -r _name command_usage _purpose; do
+    printf '  %s\n' "${command_usage#iosx }"
+  done < <(command_specs)
   cat <<'USAGE'
-  lint swift-gates <run-swift-gates args...>
-  lint swiftformat <swiftformat args...>
-  lint false-green <no-false-green-verify args...>
-  lint no-direct-bundle-config <no-direct-bundle-config args...>
-  lint no-direct-ios-helper <no-direct-ios-helper args...>
-  lint run-all <run-all args...>
-  lint dead-code <run-dead-code args...>
 
 Install `iosx` into PATH. Consumer repos should depend on this command name,
 not on a developer-machine checkout path.
@@ -76,6 +68,25 @@ path_usage_targets() {
     separator='|'
   done < <(path_specs)
   printf '\n'
+}
+
+command_specs() {
+  cat <<SPECS
+doctor	iosx doctor [--fast|--all] [--json]	verify the installed substrate CLI can find required reusable helpers; --fast excludes on-demand dead-code tooling
+version	iosx version [--json]	print the substrate git revision behind this iosx installation
+commands	iosx commands [--json]	list the public iosx command contract
+path	iosx path [--json] $(path_usage_targets)	print canonical paths for tools that require config files
+device	iosx device <subcommand> [args...]	run physical-device and LAN discovery helpers
+sim	iosx sim <subcommand> [args...]	run simulator boot/install/launch/reset/push helpers
+xcode	iosx xcode <subcommand> [args...]	create generic Xcode helper artifacts
+lint swift-gates	iosx lint swift-gates [--swiftlint-overlay .swiftlint.yml] <swift-root>...	run the strict reusable Swift lint bundle
+lint swiftformat	iosx lint swiftformat <swiftformat args...>	run SwiftFormat with the substrate strict config
+lint false-green	iosx lint false-green <path>...	reject verification scripts that can hide pipeline failures
+lint no-direct-bundle-config	iosx lint no-direct-bundle-config <swift-root>...	reject direct Bundle.main Info.plist reads in Swift code
+lint no-direct-ios-helper	iosx lint no-direct-ios-helper <path>...	reject copied generic iOS helper logic in consumer repos
+lint run-all	iosx lint run-all [selector args...]	run the substrate fast gate suite
+lint dead-code	iosx lint dead-code [args...]	run the dedicated on-demand dead-code gate
+SPECS
 }
 
 required_fast_executable_paths() {
@@ -259,25 +270,20 @@ commands() {
   [ "$#" -le 1 ] || fail 'commands accepts at most --json'
   case "${1:-}" in
     --json)
-      local targets
-      targets="$(path_usage_targets)"
-      cat <<JSON
-{"commands":[
-  {"name":"doctor","usage":"iosx doctor [--fast|--all] [--json]","purpose":"verify the installed substrate CLI can find required reusable helpers; --fast excludes on-demand dead-code tooling"},
-  {"name":"version","usage":"iosx version [--json]","purpose":"print the substrate git revision behind this iosx installation"},
-  {"name":"path","usage":"iosx path [--json] ${targets}","purpose":"print canonical paths for tools that require config files"},
-  {"name":"device","usage":"iosx device <subcommand> [args...]","purpose":"run physical-device and LAN discovery helpers"},
-  {"name":"sim","usage":"iosx sim <subcommand> [args...]","purpose":"run simulator boot/install/launch/reset/push helpers"},
-  {"name":"xcode","usage":"iosx xcode <subcommand> [args...]","purpose":"create generic Xcode helper artifacts"},
-  {"name":"lint swift-gates","usage":"iosx lint swift-gates [--swiftlint-overlay .swiftlint.yml] <swift-root>...","purpose":"run the strict reusable Swift lint bundle"},
-  {"name":"lint swiftformat","usage":"iosx lint swiftformat <swiftformat args...>","purpose":"run SwiftFormat with the substrate strict config"},
-  {"name":"lint false-green","usage":"iosx lint false-green <path>...","purpose":"reject verification scripts that can hide pipeline failures"},
-  {"name":"lint no-direct-bundle-config","usage":"iosx lint no-direct-bundle-config <swift-root>...","purpose":"reject direct Bundle.main Info.plist reads in Swift code"},
-  {"name":"lint no-direct-ios-helper","usage":"iosx lint no-direct-ios-helper <path>...","purpose":"reject copied generic iOS helper logic in consumer repos"},
-  {"name":"lint run-all","usage":"iosx lint run-all [selector args...]","purpose":"run the substrate fast gate suite"},
-  {"name":"lint dead-code","usage":"iosx lint dead-code [args...]","purpose":"run the dedicated on-demand dead-code gate"}
-]}
-JSON
+      local name
+      local command_usage
+      local purpose
+      local index=0
+      printf '{"commands":['
+      while IFS=$'\t' read -r name command_usage purpose; do
+        [ "$index" -eq 0 ] || printf ','
+        printf '\n  {"name":"%s","usage":"%s","purpose":"%s"}' \
+          "$(json_escape "$name")" \
+          "$(json_escape "$command_usage")" \
+          "$(json_escape "$purpose")"
+        index=$((index + 1))
+      done < <(command_specs)
+      printf '\n]}\n'
       ;;
     "")
       usage

@@ -3,8 +3,8 @@
 Product-neutral command line helpers for iOS app repositories. The daily command is `iosx`.
 
 The public contract is the `iosx` command. It is optimized for coding agents:
-commands are deterministic, failures name the missing tool or contract, and
-discovery commands support JSON where agents need stable parsing. Current gate
+commands are deterministic, failures name the missing tool or contract, and one
+CLI-owned command catalog drives help plus JSON discovery. Current gate
 runner internals use Python only as local developer tooling, and the substrate
 gates compile and lint those scripts before consumer repos inherit them.
 Consumer app runtimes stay Swift/native and do not depend on Python.
@@ -180,8 +180,8 @@ iosx xcode export-options \
 ## `iosx path`
 
 Prints installed substrate paths for tools that require a file path. The target
-list is CLI-owned, and smoke tests verify help text, JSON discovery, and path
-responses stay consistent.
+list is CLI-owned by the command catalog, and smoke tests verify help text, JSON
+discovery, and path responses stay consistent.
 
 ```sh
 iosx path root

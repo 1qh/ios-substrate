@@ -46,24 +46,26 @@ internal func `substrate templates stay product neutral`() throws {
 }
 
 @Test
-internal func `iosx path contract stays self consistent`() throws {
-    let commandsOutput = try runIOSX(["commands", "--json"]).standardOutput
-    let commandsData = Data(commandsOutput.utf8)
-    let parsedCommands = try JSONSerialization.jsonObject(with: commandsData)
-    guard let rootObject = parsedCommands as? [String: Any] else {
-        throw ToolingSmokeError.invalidCommandCatalog
-    }
-    guard let commands = rootObject["commands"] as? [[String: Any]] else {
-        throw ToolingSmokeError.invalidCommandCatalog
-    }
+internal func `iosx command catalog stays self consistent`() throws {
+    let commands = try iosxCommandCatalog()
+    let helpOutput = try runIOSX(["--help"]).standardOutput
 
-    let pathCommand = commands.first { $0["name"] as? String == "path" }
+    for command in commands {
+        guard let usage = command["usage"] else {
+            throw ToolingSmokeError.invalidCommandCatalog
+        }
+
+        #expect(helpOutput.contains(usage.replacingOccurrences(of: "iosx ", with: "")))
+    }
+}
+
+@Test
+internal func `iosx path contract stays self consistent`() throws {
+    let commands = try iosxCommandCatalog()
+    let pathCommand = commands.first { $0["name"] == "path" }
     guard let pathUsage = pathCommand?["usage"] as? String else {
         throw ToolingSmokeError.invalidCommandCatalog
     }
-
-    let helpOutput = try runIOSX(["--help"]).standardOutput
-    #expect(helpOutput.contains(pathUsage.replacingOccurrences(of: "iosx ", with: "")))
 
     let prefix = "iosx path [--json] "
     #expect(pathUsage.hasPrefix(prefix))
@@ -88,6 +90,52 @@ internal func `iosx path contract stays self consistent`() throws {
     }
 }
 
+@Test
+internal func `iosx doctor tiers expose stable JSON contract`() throws {
+    let fastDoctor = try iosxDoctorJSON(["doctor", "--fast", "--json"])
+    let allDoctor = try iosxDoctorJSON(["doctor", "--all", "--json"])
+
+    #expect(fastDoctor["ok"] as? Bool == true)
+    #expect(fastDoctor["scope"] as? String == "fast")
+    #expect(fastDoctor["root"] as? String == packageRoot().path)
+    #expect((fastDoctor["version"] as? String)?.isEmpty == false)
+    #expect((fastDoctor["missing"] as? [String])?.isEmpty == true)
+
+    #expect(allDoctor["ok"] as? Bool == true)
+    #expect(allDoctor["scope"] as? String == "all")
+    #expect(allDoctor["root"] as? String == packageRoot().path)
+    #expect((allDoctor["version"] as? String)?.isEmpty == false)
+    #expect((allDoctor["missing"] as? [String])?.isEmpty == true)
+}
+
+private func iosxCommandCatalog() throws -> [[String: String]] {
+    let commandsOutput = try runIOSX(["commands", "--json"]).standardOutput
+    let commandsData = Data(commandsOutput.utf8)
+    let parsedCommands = try JSONSerialization.jsonObject(with: commandsData)
+    guard let rootObject = parsedCommands as? [String: Any] else {
+        throw ToolingSmokeError.invalidCommandCatalog
+    }
+    guard let commands = rootObject["commands"] as? [[String: String]] else {
+        throw ToolingSmokeError.invalidCommandCatalog
+    }
+
+    return commands
+}
+
+private func iosxDoctorJSON(_ arguments: [String]) throws -> [String: Any] {
+    let output = try runIOSX(arguments).standardOutput
+    let data = Data(output.utf8)
+    let parsed = try JSONSerialization.jsonObject(with: data)
+    guard let object = parsed as? [String: Any] else {
+        throw ToolingSmokeError.invalidDoctorResponse(arguments)
+    }
+
+    for requiredKey in ["ok", "scope", "root", "version", "missing"] where object[requiredKey] == nil {
+        throw ToolingSmokeError.invalidDoctorResponse(arguments)
+    }
+    return object
+}
+
 private struct ToolProcessOutput {
     var standardOutput: String
     var standardError: String
@@ -95,6 +143,7 @@ private struct ToolProcessOutput {
 
 private enum ToolingSmokeError: Error, CustomStringConvertible {
     case invalidCommandCatalog
+    case invalidDoctorResponse([String])
     case invalidPathResponse(String)
     case invalidUTF8(arguments: [String])
     case processFailed(arguments: [String], status: Int32, stderr: String)
@@ -103,6 +152,9 @@ private enum ToolingSmokeError: Error, CustomStringConvertible {
         switch self {
         case .invalidCommandCatalog:
             "iosx commands --json did not contain a valid path command"
+
+        case let .invalidDoctorResponse(arguments):
+            "iosx \(arguments.joined(separator: " ")) returned an invalid doctor response"
 
         case let .invalidPathResponse(target):
             "iosx path --json returned an invalid response for \(target)"
