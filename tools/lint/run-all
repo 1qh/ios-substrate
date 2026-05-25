@@ -117,7 +117,7 @@ import re
 import sys
 blocked = re.compile(r'\b(chat|truecare|sse|citation|streaming)\b', re.IGNORECASE)
 allow = {
-    pathlib.Path('tools/lint/run-all.py'),
+    pathlib.Path('tools/lint/run-all'),
 }
 violations = []
 for path in pathlib.Path('.').rglob('*'):
@@ -177,7 +177,7 @@ def gates() -> List[Gate]:
     make_files = [p for p in ['Makefile'] if (ROOT / p).exists()] + project_files('*.mk')
 
     result: List[Gate] = [
-        Gate('run-all selector selftest', [str(Path('tools/lint/run-all.py')), '--selftest']),
+        Gate('run-all selector selftest', [str(Path('tools/lint/run-all')), '--selftest']),
         Gate('no direct Bundle config selftest', [str(Path('tools/lint/no-direct-bundle-config')), '--selftest']),
         Gate('Swift gate bundle selftest', [str(Path('tools/lint/run-swift-gates')), '--selftest']),
         Gate('no false-green verify selftest', [str(Path('tools/lint/no-false-green-verify')), '--selftest']),

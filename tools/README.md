@@ -2,7 +2,7 @@
 
 Product-neutral command line helpers for iOS app repositories.
 
-## `lint/run-all.py`
+## `lint/run-all`
 
 Runs the fast generic quality gates for this package:
 
@@ -16,17 +16,17 @@ Runs the fast generic quality gates for this package:
 Selectors are available for fast local iteration:
 
 ```sh
-tools/lint/run-all.py --list-gates
-tools/lint/run-all.py --only swiftlint
-tools/lint/run-all.py --from editorconfig
-tools/lint/run-all.py --after swiftformat
+tools/lint/run-all --list-gates
+tools/lint/run-all --only swiftlint
+tools/lint/run-all --from editorconfig
+tools/lint/run-all --after swiftformat
 ```
 
-Final proof uses `tools/lint/run-all.py` without selectors.
+Final proof uses `tools/lint/run-all` without selectors.
 
 ## `lint/run-dead-code`
 
-Runs the dedicated dead-code gate with Periphery. This is explicit and on-demand, not part of fast `run-all.py`.
+Runs the dedicated dead-code gate with Periphery. This is explicit and on-demand, not part of fast `run-all`.
 
 ## `lint/run-swift-gates`
 

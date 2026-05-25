@@ -11,10 +11,10 @@ Reusable SwiftUI app substrate. Docs live in `ios-substrate-docs`.
 ## Gates
 
 ```sh
-tools/lint/run-all.py
-tools/lint/run-all.py --list-gates
-tools/lint/run-all.py --from swiftlint
+tools/lint/run-all
+tools/lint/run-all --list-gates
+tools/lint/run-all --from swiftlint
 tools/lint/run-dead-code
 ```
 
-`run-all.py` is the fast development gate. `run-dead-code` is explicit because dead-code scans can be slower and should not block every small edit loop.
+`run-all` is the fast development gate. `run-dead-code` is explicit because dead-code scans can be slower and should not block every small edit loop.
