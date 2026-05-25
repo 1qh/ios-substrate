@@ -295,11 +295,19 @@ def main() -> None:
         print(f'FAIL: selector did not select any gate: {selector}', file=sys.stderr)
         sys.exit(1)
 
+    executed_count = 0
     for index, gate in selected:
         if not gate.applies:
             print(f'not-applicable {index}: {gate.label} — {gate.reason}', file=sys.stderr)
             continue
         run(gate.command)
+        executed_count += 1
+
+    if (args.only or args.from_gate or args.after) and executed_count == 0:
+        selector = args.only or args.from_gate or args.after
+        print(f'FAIL: selector did not execute any applicable gate: {selector}', file=sys.stderr)
+        sys.exit(1)
+
     print('ok')
 
 
