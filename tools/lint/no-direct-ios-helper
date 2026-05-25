@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""Fail consumer Makefiles that duplicate product-neutral iOS helper snippets."""
+
+from __future__ import annotations
+
+import argparse
+import os
+import pathlib
+import re
+import sys
+
+ALLOW = re.compile(r"ios-helper-allow:")
+SKIP_DIRS = {".git", ".build", ".swiftpm", "build", "DerivedData", "node_modules"}
+SCAN_NAMES = {"Makefile"}
+SCAN_EXTENSIONS = {".mk", ".sh"}
+PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
+    ("direct simulator boot", re.compile(r"\bxcrun\s+simctl\s+boot\b"), "tools/ios-sim boot-wait"),
+    ("direct simulator install", re.compile(r"\bxcrun\s+simctl\s+install\b"), "tools/ios-sim install-launch"),
+    ("direct simulator launch", re.compile(r"\bxcrun\s+simctl\s+launch\b"), "tools/ios-sim install-launch"),
+    ("direct simulator terminate", re.compile(r"\bxcrun\s+simctl\s+terminate\b"), "tools/ios-sim terminate"),
+    ("direct simulator uninstall", re.compile(r"\bxcrun\s+simctl\s+uninstall\b"), "tools/ios-sim uninstall"),
+    (
+        "direct simulator reset",
+        re.compile(r"\bxcrun\s+simctl\s+(?:shutdown\s+all|erase\s+all)\b"),
+        "tools/ios-sim nuke-all",
+    ),
+    ("direct simulator keychain reset", re.compile(r"\bxcrun\s+simctl\s+keychain\b"), "tools/ios-sim keychain-reset"),
+    ("direct simulator push", re.compile(r"\bxcrun\s+simctl\s+push\b"), "tools/ios-sim push"),
+    ("direct ad-hoc app signing", re.compile(r"\bcodesign\s+--force\s+--sign\s+-\b"), "tools/ios-sim codesign-app"),
+    (
+        "direct device install",
+        re.compile(r"\bxcrun\s+devicectl\s+device\s+install\s+app\b"),
+        "tools/ios-device install-launch",
+    ),
+    (
+        "direct device launch",
+        re.compile(r"\bxcrun\s+devicectl\s+device\s+process\s+launch\b"),
+        "tools/ios-device install-launch",
+    ),
+    (
+        "direct device discovery",
+        re.compile(r"\bxcrun\s+devicectl\s+list\s+devices\b"),
+        "tools/ios-device physical-device-udid",
+    ),
+    ("direct LAN discovery", re.compile(r"\bipconfig\s+getifaddr\b"), "tools/ios-device lan-url"),
+    (
+        "inline export options plist",
+        re.compile(r"<key>method</key><string>app-store-connect</string>"),
+        "tools/ios-xcode export-options",
+    ),
+]
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Detect duplicated iOS helper snippets in Makefiles.")
+    parser.add_argument("paths", nargs="*", default=["."], help="files or directories to scan")
+    parser.add_argument("--selftest", action="store_true")
+    return parser.parse_args()
+
+
+def should_scan(path: pathlib.Path) -> bool:
+    return path.name in SCAN_NAMES or path.suffix in SCAN_EXTENSIONS
+
+
+def walk_path(path: pathlib.Path) -> list[pathlib.Path]:
+    if path.is_file():
+        return [path] if should_scan(path) else []
+    if not path.is_dir():
+        return []
+    files: list[pathlib.Path] = []
+    for root, dirs, names in os.walk(path):
+        dirs[:] = [directory for directory in dirs if directory not in SKIP_DIRS and not directory.startswith(".")]
+        root_path = pathlib.Path(root)
+        for name in names:
+            candidate = root_path / name
+            if should_scan(candidate):
+                files.append(candidate)
+    return files
+
+
+def scan_text(text: str) -> list[str]:
+    findings: list[str] = []
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if ALLOW.search(line):
+            continue
+        if "ios-sim" in line or "ios-device" in line or "ios-xcode" in line:
+            continue
+        stripped = line.lstrip()
+        if stripped.startswith("#") or stripped.startswith("##"):
+            continue
+        for label, pattern, replacement in PATTERNS:
+            if pattern.search(line):
+                findings.append(f"{line_number}: {label}; use {replacement}")
+                break
+    return findings
+
+
+def selftest() -> None:
+    bad = "run:\n\t@xcrun simctl boot \"iPhone\"\n\t@xcrun simctl install booted App.app\n"
+    good = (
+        "run:\n"
+        "\t@$(IOS_SIM_TOOL) boot-wait --name \"iPhone\"\n"
+        "\t@$(IOS_SIM_TOOL) install-launch --app App.app --bundle-id x.y\n"
+    )
+    export_bad = "\t@echo '<key>method</key><string>app-store-connect</string>' > /tmp/ExportOptions.plist\n"
+    checks = [len(scan_text(bad)) == 2, len(scan_text(good)) == 0, len(scan_text(export_bad)) == 1]
+    if not all(checks):
+        print("FAIL: no-direct-ios-helper selftest failed", file=sys.stderr)
+        sys.exit(1)
+    print("ok")
+
+
+def main() -> None:
+    args = parse_args()
+    if args.selftest:
+        selftest()
+        return
+    files: list[pathlib.Path] = []
+    for raw_path in args.paths:
+        files.extend(walk_path(pathlib.Path(raw_path)))
+    findings: list[str] = []
+    for file in sorted(set(files)):
+        try:
+            text = file.read_text(errors="ignore")
+        except OSError:
+            continue
+        for finding in scan_text(text):
+            findings.append(f"{file}:{finding}")
+    if not findings:
+        print("ok")
+        return
+    print("FAIL: duplicated product-neutral iOS helper snippets:", file=sys.stderr)
+    for finding in findings:
+        print(f"  {finding}", file=sys.stderr)
+    sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

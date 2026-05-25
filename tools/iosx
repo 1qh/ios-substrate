@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+usage() {
+  cat <<'USAGE'
+iosx: product-neutral iOS tooling CLI
+
+Commands:
+  version
+  doctor
+  device <ios-device args...>
+  sim <ios-sim args...>
+  xcode <ios-xcode args...>
+  lint swift-gates <run-swift-gates args...>
+  lint swiftformat <swiftformat args...>
+  lint false-green <no-false-green-verify args...>
+  lint no-direct-bundle-config <no-direct-bundle-config args...>
+  lint no-direct-ios-helper <no-direct-ios-helper args...>
+  lint run-all <run-all args...>
+  lint dead-code <run-dead-code args...>
+
+Install `iosx` into PATH. Consumer repos should depend on this command name,
+not on a developer-machine checkout path.
+USAGE
+}
+
+fail() {
+  printf 'iosx: %s\n' "$1" >&2
+  exit 1
+}
+
+exec_tool() {
+  local tool="$1"
+  shift
+  [ -x "$tool" ] || fail "missing executable: $tool"
+  exec "$tool" "$@"
+}
+
+version() {
+  git -C "$ROOT" rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown\n'
+}
+
+doctor() {
+  [ -x "$ROOT/tools/ios-device" ] || fail 'missing tools/ios-device'
+  [ -x "$ROOT/tools/ios-sim" ] || fail 'missing tools/ios-sim'
+  [ -x "$ROOT/tools/ios-xcode" ] || fail 'missing tools/ios-xcode'
+  [ -x "$ROOT/tools/lint/run-swift-gates" ] || fail 'missing tools/lint/run-swift-gates'
+  [ -x "$ROOT/tools/lint/no-false-green-verify" ] || fail 'missing tools/lint/no-false-green-verify'
+  [ -x "$ROOT/tools/lint/no-direct-ios-helper" ] || fail 'missing tools/lint/no-direct-ios-helper'
+  printf 'ok\n'
+}
+
+case "${1:-}" in
+  version)
+    shift
+    [ "$#" -eq 0 ] || fail 'version does not accept options'
+    version
+    ;;
+  doctor)
+    shift
+    [ "$#" -eq 0 ] || fail 'doctor does not accept options'
+    doctor
+    ;;
+  device)
+    shift
+    exec_tool "$ROOT/tools/ios-device" "$@"
+    ;;
+  sim)
+    shift
+    exec_tool "$ROOT/tools/ios-sim" "$@"
+    ;;
+  xcode)
+    shift
+    exec_tool "$ROOT/tools/ios-xcode" "$@"
+    ;;
+  lint)
+    shift
+    case "${1:-}" in
+      swift-gates)
+        shift
+        exec_tool "$ROOT/tools/lint/run-swift-gates" "$@"
+        ;;
+      swiftformat)
+        shift
+        command -v swiftformat >/dev/null 2>&1 || fail 'missing required tool: swiftformat'
+        exec swiftformat --config "$ROOT/templates/strict-swiftformat.config" "$@"
+        ;;
+      false-green)
+        shift
+        exec_tool "$ROOT/tools/lint/no-false-green-verify" "$@"
+        ;;
+      no-direct-bundle-config)
+        shift
+        exec_tool "$ROOT/tools/lint/no-direct-bundle-config" "$@"
+        ;;
+      no-direct-ios-helper)
+        shift
+        exec_tool "$ROOT/tools/lint/no-direct-ios-helper" "$@"
+        ;;
+      run-all)
+        shift
+        exec_tool "$ROOT/tools/lint/run-all" "$@"
+        ;;
+      dead-code)
+        shift
+        exec_tool "$ROOT/tools/lint/run-dead-code" "$@"
+        ;;
+      *)
+        usage >&2
+        exit 2
+        ;;
+    esac
+    ;;
+  help | --help | -h)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac

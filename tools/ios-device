@@ -8,6 +8,7 @@ ios-device: product-neutral iOS development helpers
 Commands:
   simulator-udid --name <simulator-name>
   physical-device-udid
+  install-launch --app <app-path> --bundle-id <bundle-id> [--device <udid>]
   team-id [--team-id <id>] [--team-name <name>]
   lan-url --port <port> [--scheme http|https]
 
@@ -96,6 +97,39 @@ for line in text.splitlines():
   fi
   require_value 'physical device UDID' "$udid"
   printf '%s\n' "$udid"
+}
+
+install_launch() {
+  local app=""
+  local bundle_id=""
+  local udid=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --app)
+        shift
+        app="${1:-}"
+        ;;
+      --bundle-id)
+        shift
+        bundle_id="${1:-}"
+        ;;
+      --device)
+        shift
+        udid="${1:-}"
+        ;;
+      *) fail "unknown install-launch option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--app' "$app"
+  require_value '--bundle-id' "$bundle_id"
+  if [ -z "$udid" ]; then
+    udid="$(physical_device_udid)"
+  fi
+  require_value 'physical device UDID' "$udid"
+  [ -d "$app" ] || fail "app bundle not found: $app"
+  xcrun devicectl device install app --device "$udid" "$app"
+  xcrun devicectl device process launch --device "$udid" "$bundle_id"
 }
 
 team_id() {
@@ -187,6 +221,10 @@ case "${1:-}" in
   physical-device-udid)
     shift
     physical_device_udid "$@"
+    ;;
+  install-launch)
+    shift
+    install_launch "$@"
     ;;
   team-id)
     shift

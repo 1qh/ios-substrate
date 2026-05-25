@@ -1,0 +1,365 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+ios-sim: product-neutral simulator helpers
+
+Commands:
+  boot-wait --name <simulator-name> [--timeout <seconds>] [--open]
+  install-launch --app <app-path> --bundle-id <bundle-id> [--device <booted|name|udid>] [--codesign <always|retry|never>] [--launch-retries <count>] [--launch-retry-delay <seconds>]
+  install --app <app-path> [--device <booted|name|udid>] [--codesign <always|retry|never>]
+  terminate --bundle-id <bundle-id> [--device <booted|name|udid>]
+  uninstall --bundle-id <bundle-id> [--device <booted|name|udid>]
+  shutdown --device <all|name|udid>
+  keychain-reset [--device <booted|name|udid>]
+  push --bundle-id <bundle-id> --payload <payload-path> [--device <booted|name|udid>]
+  nuke-all
+  codesign-app --app <app-path>
+
+The script stores no product names, bundle identifiers, hosts, or account data.
+USAGE
+}
+
+fail() {
+  printf 'ios-sim: %s\n' "$1" >&2
+  exit 1
+}
+
+require_value() {
+  local name="$1"
+  local value="${2:-}"
+  [ -n "$value" ] || fail "$name is required"
+}
+
+require_tool() {
+  command -v "$1" >/dev/null 2>&1 || fail "missing required tool: $1"
+}
+
+codesign_app() {
+  local app=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --app)
+        shift
+        app="${1:-}"
+        ;;
+      *) fail "unknown codesign-app option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--app' "$app"
+  [ -d "$app" ] || fail "app bundle not found: $app"
+  require_tool codesign
+  require_tool file
+  find "$app" -type f -exec sh -c 'file "$1" | grep -q Mach-O && codesign --force --sign - --timestamp=none "$1" 2>/dev/null || true' _ {} \; || true
+  codesign --force --sign - --timestamp=none "$app" 2>/dev/null || true
+}
+
+boot_wait() {
+  local name="${IOS_SUBSTRATE_SIMULATOR_NAME:-}"
+  local timeout=60
+  local open_sim=0
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --name)
+        shift
+        name="${1:-}"
+        ;;
+      --timeout)
+        shift
+        timeout="${1:-}"
+        ;;
+      --open)
+        open_sim=1
+        ;;
+      *) fail "unknown boot-wait option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--name' "$name"
+  [[ "$timeout" =~ ^[0-9]+$ ]] || fail '--timeout must be a positive integer'
+  require_tool xcrun
+  xcrun simctl boot "$name" >/dev/null 2>&1 || true
+  if [ "$open_sim" -eq 1 ]; then
+    open -a Simulator >/dev/null 2>&1 || true
+  fi
+  local deadline
+  deadline=$(($(date +%s) + timeout))
+  while ! xcrun simctl list devices booted 2>/dev/null | grep -Fq "$name"; do
+    if [ "$(date +%s)" -gt "$deadline" ]; then
+      fail "simulator boot timeout ${timeout}s for '$name'"
+    fi
+    sleep 1
+  done
+}
+
+install_launch() {
+  local app=""
+  local bundle_id=""
+  local device="booted"
+  local sign_mode="retry"
+  local retries=8
+  local retry_delay=3
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --app)
+        shift
+        app="${1:-}"
+        ;;
+      --bundle-id)
+        shift
+        bundle_id="${1:-}"
+        ;;
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      --codesign)
+        shift
+        sign_mode="${1:-}"
+        ;;
+      --launch-retries)
+        shift
+        retries="${1:-}"
+        ;;
+      --launch-retry-delay)
+        shift
+        retry_delay="${1:-}"
+        ;;
+      *) fail "unknown install-launch option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--app' "$app"
+  require_value '--bundle-id' "$bundle_id"
+  require_value '--device' "$device"
+  [ -d "$app" ] || fail "app bundle not found: $app"
+  [[ "$retries" =~ ^[0-9]+$ ]] || fail '--launch-retries must be a positive integer'
+  [[ "$retry_delay" =~ ^[0-9]+$ ]] || fail '--launch-retry-delay must be a positive integer'
+  case "$sign_mode" in
+    always | retry | never) ;;
+    *) fail '--codesign must be always, retry, or never' ;;
+  esac
+  require_tool xcrun
+  if [ "$sign_mode" = 'always' ]; then
+    codesign_app --app "$app"
+  fi
+  if ! xcrun simctl install "$device" "$app" >/dev/null 2>&1; then
+    if [ "$sign_mode" = 'retry' ]; then
+      codesign_app --app "$app"
+      xcrun simctl install "$device" "$app"
+    else
+      xcrun simctl install "$device" "$app"
+    fi
+  fi
+  local attempt=1
+  while [ "$attempt" -le "$retries" ]; do
+    if xcrun simctl launch "$device" "$bundle_id" >/dev/null 2>&1; then
+      printf 'ok\n'
+      return
+    fi
+    sleep "$retry_delay"
+    attempt=$((attempt + 1))
+  done
+  xcrun simctl launch "$device" "$bundle_id"
+}
+
+install_app() {
+  local app=""
+  local device="booted"
+  local sign_mode="retry"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --app)
+        shift
+        app="${1:-}"
+        ;;
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      --codesign)
+        shift
+        sign_mode="${1:-}"
+        ;;
+      *) fail "unknown install option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--app' "$app"
+  require_value '--device' "$device"
+  [ -d "$app" ] || fail "app bundle not found: $app"
+  case "$sign_mode" in
+    always | retry | never) ;;
+    *) fail '--codesign must be always, retry, or never' ;;
+  esac
+  if [ "$sign_mode" = 'always' ]; then
+    codesign_app --app "$app"
+  fi
+  if ! xcrun simctl install "$device" "$app" >/dev/null 2>&1; then
+    if [ "$sign_mode" = 'retry' ]; then
+      codesign_app --app "$app"
+      xcrun simctl install "$device" "$app"
+    else
+      xcrun simctl install "$device" "$app"
+    fi
+  fi
+}
+
+terminate_app() {
+  local bundle_id=""
+  local device="booted"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --bundle-id)
+        shift
+        bundle_id="${1:-}"
+        ;;
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      *) fail "unknown terminate option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--bundle-id' "$bundle_id"
+  xcrun simctl terminate "$device" "$bundle_id" >/dev/null 2>&1 || true
+}
+
+uninstall_app() {
+  local bundle_id=""
+  local device="booted"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --bundle-id)
+        shift
+        bundle_id="${1:-}"
+        ;;
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      *) fail "unknown uninstall option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--bundle-id' "$bundle_id"
+  xcrun simctl uninstall "$device" "$bundle_id" >/dev/null 2>&1 || true
+}
+
+shutdown_device() {
+  local device=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      *) fail "unknown shutdown option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--device' "$device"
+  xcrun simctl shutdown "$device" >/dev/null 2>&1 || true
+}
+
+keychain_reset() {
+  local device="booted"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      *) fail "unknown keychain-reset option: $1" ;;
+    esac
+    shift || true
+  done
+  xcrun simctl keychain "$device" reset >/dev/null 2>&1 || true
+}
+
+push_payload() {
+  local bundle_id=""
+  local device="booted"
+  local payload=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --bundle-id)
+        shift
+        bundle_id="${1:-}"
+        ;;
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      --payload)
+        shift
+        payload="${1:-}"
+        ;;
+      *) fail "unknown push option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--bundle-id' "$bundle_id"
+  require_value '--payload' "$payload"
+  [ -f "$payload" ] || fail "payload not found: $payload"
+  xcrun simctl push "$device" "$bundle_id" "$payload"
+}
+
+nuke_all() {
+  xcrun simctl shutdown all >/dev/null 2>&1 || true
+  xcrun simctl erase all
+}
+
+case "${1:-}" in
+  boot-wait)
+    shift
+    boot_wait "$@"
+    ;;
+  install-launch)
+    shift
+    install_launch "$@"
+    ;;
+  install)
+    shift
+    install_app "$@"
+    ;;
+  terminate)
+    shift
+    terminate_app "$@"
+    ;;
+  uninstall)
+    shift
+    uninstall_app "$@"
+    ;;
+  shutdown)
+    shift
+    shutdown_device "$@"
+    ;;
+  keychain-reset)
+    shift
+    keychain_reset "$@"
+    ;;
+  push)
+    shift
+    push_payload "$@"
+    ;;
+  nuke-all)
+    shift
+    [ "$#" -eq 0 ] || fail 'nuke-all does not accept options'
+    nuke_all
+    ;;
+  codesign-app)
+    shift
+    codesign_app "$@"
+    ;;
+  help | --help | -h)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac

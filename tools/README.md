@@ -1,11 +1,22 @@
 # Tools
 
-Product-neutral command line helpers for iOS app repositories.
+Product-neutral command line helpers for iOS app repositories. The daily command is `iosx`.
 
-The public contract is the extensionless command path. Current gate runner
+The public contract is the `iosx` command. Current gate runner
 internals use Python only as local developer tooling, and the substrate gates
 compile and lint those scripts before consumer repos inherit them. Consumer app
 runtimes stay Swift/native and do not depend on Python.
+
+## Install
+
+Install the single command into PATH for local development:
+
+```sh
+tools/install-local
+iosx doctor
+```
+
+Consumer repos should depend on `iosx`, not a checkout-relative tool path.
 
 ## `lint/run-all`
 
@@ -57,6 +68,18 @@ tools/lint/no-false-green-verify tools Makefile
 tools/lint/no-false-green-verify --selftest
 ```
 
+## `lint/no-direct-ios-helper`
+
+Fails consumer Makefiles that reimplement product-neutral iOS helper snippets
+already owned by this substrate: simulator boot/install/launch/reset/push,
+ad-hoc simulator app signing, physical-device install/launch/discovery, LAN URL
+discovery, and generic ExportOptions plist writing.
+
+```sh
+tools/lint/no-direct-ios-helper Makefile tools/make
+tools/lint/no-direct-ios-helper --selftest
+```
+
 ## `lint/no-direct-bundle-config`
 
 Fails direct Swift `Bundle.main` Info.plist reads. Consumers should expose an
@@ -68,15 +91,46 @@ tools/lint/no-direct-bundle-config Sources
 tools/lint/no-direct-bundle-config --selftest
 ```
 
-## `ios-device`
+## `iosx device`
 
 Owns local device, simulator, LAN URL, and signing identity discovery.
 
 Consumers provide project-specific values through arguments or environment variables. The script never stores app names, bundle identifiers, tester lists, or backend hosts.
 
 ```sh
-tools/ios-device simulator-udid --name "iPhone 17 Pro Max"
-tools/ios-device physical-device-udid
-tools/ios-device team-id --team-name "Developer Name"
-tools/ios-device lan-url --port 5174
+iosx device simulator-udid --name "iPhone 17 Pro Max"
+iosx device physical-device-udid
+iosx device install-launch --app /tmp/App.app --bundle-id dev.example.app
+iosx device team-id --team-name "Developer Name"
+iosx device lan-url --port 5174
+```
+
+## `iosx sim`
+
+Owns product-neutral simulator operations that otherwise tend to be copied into
+every app Makefile.
+
+```sh
+iosx sim boot-wait --name "iPhone 17 Pro Max" --open
+iosx sim install --app /tmp/App.app --codesign retry
+iosx sim install-launch --app /tmp/App.app --bundle-id dev.example.app --codesign retry
+iosx sim terminate --bundle-id dev.example.app
+iosx sim uninstall --bundle-id dev.example.app
+iosx sim shutdown --device "iPhone 17 Pro Max"
+iosx sim keychain-reset
+iosx sim push --bundle-id dev.example.app --payload fixtures/push.apns
+iosx sim nuke-all
+```
+
+## `iosx xcode`
+
+Owns generic Xcode helper artifacts that should not be handwritten inside
+consumer Makefiles.
+
+```sh
+iosx xcode export-options \
+  --team-id ABCDE12345 \
+  --output /tmp/ExportOptions.plist \
+  --signing-style automatic \
+  --signing-certificate "Apple Distribution"
 ```

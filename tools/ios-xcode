@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+ios-xcode: product-neutral Xcode helper commands
+
+Commands:
+  export-options --team-id <team-id> --output <plist-path> [--method <method>] [--destination <destination>] [--signing-style <automatic|manual>] [--signing-certificate <name>] [--provisioning-profile <bundle-id=profile-name>]
+
+The script writes generic ExportOptions.plist files only. Product release policy,
+archive paths, accounts, testers, and upload evidence stay in consumer repos.
+USAGE
+}
+
+fail() {
+  printf 'ios-xcode: %s\n' "$1" >&2
+  exit 1
+}
+
+require_value() {
+  local name="$1"
+  local value="${2:-}"
+  [ -n "$value" ] || fail "$name is required"
+}
+
+export_options() {
+  local team_id=""
+  local output=""
+  local method="app-store-connect"
+  local destination="upload"
+  local signing_style=""
+  local signing_certificate=""
+  local profiles=()
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --team-id)
+        shift
+        team_id="${1:-}"
+        ;;
+      --output)
+        shift
+        output="${1:-}"
+        ;;
+      --method)
+        shift
+        method="${1:-}"
+        ;;
+      --destination)
+        shift
+        destination="${1:-}"
+        ;;
+      --signing-style)
+        shift
+        signing_style="${1:-}"
+        ;;
+      --signing-certificate)
+        shift
+        signing_certificate="${1:-}"
+        ;;
+      --provisioning-profile)
+        shift
+        profiles+=("${1:-}")
+        ;;
+      *) fail "unknown export-options option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--team-id' "$team_id"
+  require_value '--output' "$output"
+  local profiles_text=""
+  if [ "${#profiles[@]}" -gt 0 ]; then
+    profiles_text="$(printf '%s\n' "${profiles[@]}")"
+  fi
+  TEAM_ID_VALUE="$team_id" \
+    OUTPUT_VALUE="$output" \
+    METHOD_VALUE="$method" \
+    DESTINATION_VALUE="$destination" \
+    SIGNING_STYLE_VALUE="$signing_style" \
+    SIGNING_CERTIFICATE_VALUE="$signing_certificate" \
+    PROFILES_VALUE="$profiles_text" \
+    python3 - <<'PY'
+import os
+import plistlib
+from pathlib import Path
+
+data = {
+    'method': os.environ['METHOD_VALUE'],
+    'teamID': os.environ['TEAM_ID_VALUE'],
+    'destination': os.environ['DESTINATION_VALUE'],
+}
+style = os.environ.get('SIGNING_STYLE_VALUE', '')
+if style:
+    if style not in {'automatic', 'manual'}:
+        raise SystemExit('ios-xcode: --signing-style must be automatic or manual')
+    data['signingStyle'] = style
+certificate = os.environ.get('SIGNING_CERTIFICATE_VALUE', '')
+if certificate:
+    data['signingCertificate'] = certificate
+profiles_raw = os.environ.get('PROFILES_VALUE', '')
+profiles = {}
+for raw in profiles_raw.splitlines():
+    if not raw:
+        continue
+    if '=' not in raw:
+        raise SystemExit('ios-xcode: --provisioning-profile must be bundle-id=profile-name')
+    bundle, profile = raw.split('=', 1)
+    if not bundle or not profile:
+        raise SystemExit('ios-xcode: --provisioning-profile must be bundle-id=profile-name')
+    profiles[bundle] = profile
+if profiles:
+    data['provisioningProfiles'] = profiles
+output = Path(os.environ['OUTPUT_VALUE'])
+output.parent.mkdir(parents=True, exist_ok=True)
+with output.open('wb') as fh:
+    plistlib.dump(data, fh, sort_keys=False)
+PY
+}
+
+case "${1:-}" in
+  export-options)
+    shift
+    export_options "$@"
+    ;;
+  help | --help | -h)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac

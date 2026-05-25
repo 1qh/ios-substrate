@@ -20,6 +20,18 @@ indent_size = 2
 [tools/ios-device]
 indent_size = 2
 
+[tools/ios-sim]
+indent_size = 2
+
+[tools/ios-xcode]
+indent_size = 2
+
+[tools/iosx]
+indent_size = 2
+
+[tools/install-local]
+indent_size = 2
+
 [tools/lint/run-dead-code]
 indent_size = 2
 
@@ -28,3 +40,6 @@ indent_size = 2
 
 [tools/lint/no-direct-bundle-config]
 indent_size = 2
+
+[tools/lint/no-direct-ios-helper]
+indent_size = 4

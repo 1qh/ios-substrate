@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PREFIX="${PREFIX:-$HOME/.local}"
+BINDIR="$PREFIX/bin"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET="$SCRIPT_DIR/iosx"
+
+mkdir -p "$BINDIR"
+ln -sfn "$TARGET" "$BINDIR/iosx"
+printf 'installed %s\n' "$BINDIR/iosx"
+printf 'ensure %s is on PATH\n' "$BINDIR"
