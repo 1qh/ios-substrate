@@ -11,7 +11,7 @@ Consumer app runtimes stay Swift/native and do not depend on Python.
 
 ## Install
 
-Install the single command into PATH for local development:
+Install the single command into PATH for agent-operated sessions:
 
 ```sh
 tools/install-local
@@ -22,7 +22,7 @@ Consumer repos should depend on `iosx`, not a checkout-relative tool path.
 
 ## Agent contract
 
-Future sessions should learn and use one command:
+Future coding-agent sessions should learn and use one command:
 
 ```sh
 iosx commands --json
