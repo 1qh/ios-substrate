@@ -8,8 +8,9 @@ discovery commands support JSON where agents need stable parsing. Current gate
 runner internals use Python only as local developer tooling, and the substrate
 gates compile and lint those scripts before consumer repos inherit them.
 Consumer app runtimes stay Swift/native and do not depend on Python.
-`iosx doctor` fails fast when a public helper, strict config file, or external
-gate binary is missing.
+`iosx doctor --fast` fails when a fast-loop helper, strict config file, or
+external gate binary is missing. `iosx doctor --all` also checks dedicated
+on-demand dead-code tooling.
 
 ## Install
 
@@ -18,6 +19,7 @@ Install the single command into PATH for agent-operated sessions:
 ```sh
 tools/install-local
 iosx doctor
+iosx doctor --fast
 ```
 
 Consumer repos should depend on `iosx`, not a checkout-relative tool path.
@@ -28,7 +30,8 @@ Future coding-agent sessions should learn and use one command:
 
 ```sh
 iosx commands --json
-iosx doctor --json
+iosx doctor --fast --json
+iosx doctor --all --json
 iosx version --json
 iosx path --json swiftlint-config
 iosx path --json markdownlint-config
@@ -43,7 +46,7 @@ consume the command from app repositories.
 
 Runs the fast generic quality gates for this package:
 
-- `iosx doctor` public contract verification.
+- `iosx doctor --fast` public fast-loop contract verification.
 - Swift package tests.
 - shellcheck and shfmt for shell scripts.
 - SwiftLint strict, SwiftFormat lint, and shared launch-config access checks for Swift roots.
@@ -61,6 +64,9 @@ tools/lint/run-all --after swiftformat
 ```
 
 Final proof uses `tools/lint/run-all` without selectors.
+
+Full tooling proof also runs `iosx doctor --all`; it is separate from the fast
+gate because dead-code scanning remains dedicated and on-demand.
 
 ## `lint/run-dead-code`
 

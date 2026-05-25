@@ -9,7 +9,7 @@ iosx: product-neutral iOS tooling CLI
 Commands:
   version
   commands [--json]
-  doctor
+  doctor [--fast|--all] [--json]
   device <ios-device args...>
   sim <ios-sim args...>
   xcode <ios-xcode args...>
@@ -51,7 +51,7 @@ version() {
   git -C "$ROOT" rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown\n'
 }
 
-required_executable_paths() {
+required_fast_executable_paths() {
   cat <<'PATHS'
 tools/ios-device
 tools/ios-sim
@@ -61,6 +61,11 @@ tools/lint/no-false-green-verify
 tools/lint/no-direct-bundle-config
 tools/lint/no-direct-ios-helper
 tools/lint/run-all
+PATHS
+}
+
+required_on_demand_executable_paths() {
+  cat <<'PATHS'
 tools/lint/run-dead-code
 PATHS
 }
@@ -78,7 +83,7 @@ _typos.toml
 PATHS
 }
 
-required_external_tools() {
+required_fast_external_tools() {
   cat <<'TOOLS'
 checkmake
 codesign
@@ -89,7 +94,6 @@ ipconfig
 jq
 lychee
 markdownlint-cli2
-periphery
 python3
 ruff
 security
@@ -105,6 +109,12 @@ yamllint
 TOOLS
 }
 
+required_on_demand_external_tools() {
+  cat <<'TOOLS'
+periphery
+TOOLS
+}
+
 required_absolute_paths() {
   cat <<'PATHS'
 /usr/libexec/PlistBuddy
@@ -112,13 +122,38 @@ PATHS
 }
 
 doctor() {
-  local json="${1:-}"
+  local json=false
+  local scope=all
   local missing=()
   local path
 
+  while [ "$#" -gt 0 ]; do
+    case "${1:-}" in
+      --json)
+        json=true
+        ;;
+      --fast)
+        scope=fast
+        ;;
+      --all)
+        scope=all
+        ;;
+      *)
+        fail 'doctor only accepts --fast, --all, and --json'
+        ;;
+    esac
+    shift
+  done
+
   while IFS= read -r path; do
     [ -x "$ROOT/$path" ] || missing+=("$path")
-  done < <(required_executable_paths)
+  done < <(required_fast_executable_paths)
+
+  if [ "$scope" = all ]; then
+    while IFS= read -r path; do
+      [ -x "$ROOT/$path" ] || missing+=("$path")
+    done < <(required_on_demand_executable_paths)
+  fi
 
   while IFS= read -r path; do
     [ -f "$ROOT/$path" ] || missing+=("$path")
@@ -126,20 +161,26 @@ doctor() {
 
   while IFS= read -r path; do
     command -v "$path" >/dev/null 2>&1 || missing+=("tool:$path")
-  done < <(required_external_tools)
+  done < <(required_fast_external_tools)
+
+  if [ "$scope" = all ]; then
+    while IFS= read -r path; do
+      command -v "$path" >/dev/null 2>&1 || missing+=("tool:$path")
+    done < <(required_on_demand_external_tools)
+  fi
 
   while IFS= read -r path; do
     [ -x "$path" ] || missing+=("$path")
   done < <(required_absolute_paths)
 
-  if [ "$json" = "--json" ]; then
+  if [ "$json" = true ]; then
     printf '{"ok":'
     if [ "${#missing[@]}" -eq 0 ]; then
       printf 'true'
     else
       printf 'false'
     fi
-    printf ',"root":"%s","version":"%s","missing":[' "$(json_escape "$ROOT")" "$(json_escape "$(version)")"
+    printf ',"scope":"%s","root":"%s","version":"%s","missing":[' "$(json_escape "$scope")" "$(json_escape "$ROOT")" "$(json_escape "$(version)")"
     local index
     for index in "${!missing[@]}"; do
       [ "$index" -eq 0 ] || printf ','
@@ -152,7 +193,7 @@ doctor() {
     fail "missing executable: ${missing[0]}"
   fi
 
-  if [ "$json" != "--json" ]; then
+  if [ "$json" != true ]; then
     printf 'ok\n'
   fi
 }
@@ -214,7 +255,7 @@ commands() {
     --json)
       cat <<'JSON'
 {"commands":[
-  {"name":"doctor","usage":"iosx doctor [--json]","purpose":"verify the installed substrate CLI can find every required reusable helper"},
+  {"name":"doctor","usage":"iosx doctor [--fast|--all] [--json]","purpose":"verify the installed substrate CLI can find required reusable helpers; --fast excludes on-demand dead-code tooling"},
   {"name":"version","usage":"iosx version [--json]","purpose":"print the substrate git revision behind this iosx installation"},
   {"name":"path","usage":"iosx path [--json] root|checkmake-config|editorconfig-checker-config|markdownlint-config|ruff-config|swiftformat-config|swiftlint-config|typos-config|yamllint-config","purpose":"print canonical paths for tools that require config files"},
   {"name":"device","usage":"iosx device <subcommand> [args...]","purpose":"run physical-device and LAN discovery helpers"},
@@ -262,19 +303,7 @@ case "${1:-}" in
     ;;
   doctor)
     shift
-    case "${1:-}" in
-      --json)
-        [ "$#" -eq 1 ] || fail 'doctor --json does not accept extra options'
-        doctor "$@"
-        ;;
-      "")
-        [ "$#" -eq 0 ] || fail 'doctor does not accept options'
-        doctor "$@"
-        ;;
-      *)
-        fail 'doctor only accepts --json'
-        ;;
-    esac
+    doctor "$@"
     ;;
   device)
     shift

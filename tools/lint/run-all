@@ -200,7 +200,7 @@ def gates() -> list[Gate]:
 
     result: list[Gate] = [
         Gate('run-all selector selftest', [str(Path('tools/lint/run-all')), '--selftest']),
-        Gate('iosx doctor', [str(Path('tools/iosx')), 'doctor']),
+        Gate('iosx doctor fast contract', [str(Path('tools/iosx')), 'doctor', '--fast']),
         Gate('no direct Bundle config selftest', [str(Path('tools/lint/no-direct-bundle-config')), '--selftest']),
         Gate('Swift gate bundle selftest', [str(Path('tools/lint/run-swift-gates')), '--selftest']),
         Gate('no false-green verify selftest', [str(Path('tools/lint/no-false-green-verify')), '--selftest']),
