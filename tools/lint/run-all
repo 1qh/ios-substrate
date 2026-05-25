@@ -163,8 +163,12 @@ def selftest() -> None:
     applicable_gates = [Gate('real gate', ['true'])]
     if selected_applicable_count(applicable_gates, applicable_args) != 1:
         failed.append(('real', 1, 'real gate', True))
+    gate_commands = {gate.label: gate.command for gate in gates()}
+    typos_command = gate_commands.get('typos repository scan', [])
+    if '--config' not in typos_command or '_typos.toml' not in typos_command:
+        failed.append(('typos-config', 0, 'typos repository scan', True))
     if failed:
-        print('FAIL: selector selftest failed', file=sys.stderr)
+        print('FAIL: run-all selftest failed', file=sys.stderr)
         for selector, index, label, expected in failed:
             print(f'selector={selector} index={index} label={label} expected={expected}', file=sys.stderr)
         sys.exit(1)
