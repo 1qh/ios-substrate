@@ -33,6 +33,13 @@ public struct InfoDictionaryConfig: Equatable, Sendable {
         values[key]
     }
 
+    public func optionalString(
+        _ key: String,
+        environment: [String: String],
+    ) -> String? {
+        Self.normalizedString(environment[key] ?? "") ?? optionalString(key)
+    }
+
     public func requiredString(_ key: String) throws -> String {
         guard let value = optionalString(key) else {
             throw SubstrateConfigError.missingValue(key)

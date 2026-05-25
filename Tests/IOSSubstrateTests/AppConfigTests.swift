@@ -47,6 +47,15 @@ internal func `info dictionary config treats unresolved xcode placeholders as ab
 }
 
 @Test
+internal func `info dictionary config lets launch environment override optional strings`() {
+    let config = InfoDictionaryConfig(values: ["SENTRY_DSN": "bundle-dsn"])
+
+    #expect(config.optionalString("SENTRY_DSN", environment: ["SENTRY_DSN": " env-dsn "]) == "env-dsn")
+    #expect(config.optionalString("SENTRY_DSN", environment: ["SENTRY_DSN": "$(SENTRY_DSN)"]) == "bundle-dsn")
+    #expect(config.optionalString("SENTRY_DSN", environment: [:]) == "bundle-dsn")
+}
+
+@Test
 internal func `info dictionary config parses explicit booleans`() throws {
     let config = InfoDictionaryConfig(dictionary: ["FEATURE_ON": "yes", "FEATURE_OFF": 0])
     #expect(try config.bool("FEATURE_ON") == true)
