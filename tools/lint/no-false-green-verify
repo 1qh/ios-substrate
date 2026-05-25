@@ -15,7 +15,8 @@ import re
 import sys
 
 PIPE_SINK = re.compile(r"\|\s*(?:tail|head|grep|rg|xcbeautify|sed|awk|cat|tee|sort|uniq|wc)\b")
-HAS_PIPEFAIL = re.compile(r"set\s+-[A-Za-z]*o[A-Za-z]*\s+pipefail|set\s+-o\s+pipefail")
+VERIFY_COMMAND = re.compile(r"\b(?:xcodebuild|swiftlint|swiftformat|bun|make|gradle|\./gradlew|pytest|npm|pnpm|yarn)\b")
+HAS_PIPEFAIL = re.compile(r"set\s+-[A-Za-z]*o[A-Za-z]*\s+pipefail|set\s+-o\s+pipefail|\.SHELLFLAGS\s*:?=.*pipefail")
 HAS_PIPESTATUS = re.compile(r"PIPESTATUS|pipestatus")
 ALLOW = re.compile(r"(?:#|//)\s*false-green-verify-allow:")
 SCAN_EXTENSIONS = {".sh", ".bash", ".mk"}
@@ -30,16 +31,37 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def has_global_pipefail(lines: list[str]) -> bool:
+    return any(HAS_PIPEFAIL.search(line) for line in lines[:40])
+
+
+def local_context(lines: list[str], index: int) -> str:
+    start = max(0, index - 4)
+    end = min(len(lines), index + 3)
+    return "\n".join(lines[start:end])
+
+
+def has_local_pipefail(lines: list[str], index: int) -> bool:
+    context = local_context(lines, index)
+    return bool(HAS_PIPEFAIL.search(context) or HAS_PIPESTATUS.search(context))
+
+
 def scan_text(text: str) -> list[int]:
-    if HAS_PIPEFAIL.search(text) or HAS_PIPESTATUS.search(text):
-        return []
     lines = text.splitlines()
+    global_pipefail = has_global_pipefail(lines)
     hits: list[int] = []
     for index, line in enumerate(lines):
         if not PIPE_SINK.search(line):
             continue
         previous = lines[index - 1] if index > 0 else ""
         if ALLOW.search(line) or ALLOW.search(previous):
+            continue
+        protected = global_pipefail or has_local_pipefail(lines, index)
+        context = local_context(lines, index)
+        if VERIFY_COMMAND.search(context) and not protected:
+            hits.append(index + 1)
+            continue
+        if protected:
             continue
         for offset in range(3):
             if index + offset >= len(lines):
@@ -58,11 +80,15 @@ def selftest() -> None:
     good_pipefail = "set -o pipefail\nbun lint.ts | tail -3\necho \"rc=$?\"\n"
     good_redirect = "bun lint.ts > /tmp/l 2>&1\nrc=$?\ntail -3 /tmp/l\n"
     good_pipestatus = "bun lint.ts | tail -3\nrc=${PIPESTATUS[0]}\n"
+    bad_verify = "xcodebuild test 2>&1 | xcbeautify\n"
+    good_make = "\t@set -o pipefail; xcodebuild test \\\n\t	2>&1 | xcbeautify\n"
     checks = [
         len(scan_text(bad)) == 1,
         len(scan_text(good_pipefail)) == 0,
         len(scan_text(good_redirect)) == 0,
         len(scan_text(good_pipestatus)) == 0,
+        len(scan_text(bad_verify)) == 1,
+        len(scan_text(good_make)) == 0,
     ]
     if not all(checks):
         print("FAIL: no-false-green-verify selftest failed", file=sys.stderr)
