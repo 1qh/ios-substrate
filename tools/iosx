@@ -77,6 +77,28 @@ templates/strict-yamllint.yml
 PATHS
 }
 
+required_external_tools() {
+  cat <<'TOOLS'
+checkmake
+editorconfig-checker
+git
+lychee
+markdownlint-cli2
+periphery
+python3
+ruff
+shellcheck
+shfmt
+swift
+swiftformat
+swiftlint
+taplo
+typos
+xcrun
+yamllint
+TOOLS
+}
+
 doctor() {
   local json="${1:-}"
   local missing=()
@@ -89,6 +111,10 @@ doctor() {
   while IFS= read -r path; do
     [ -f "$ROOT/$path" ] || missing+=("$path")
   done < <(required_file_paths)
+
+  while IFS= read -r path; do
+    command -v "$path" >/dev/null 2>&1 || missing+=("tool:$path")
+  done < <(required_external_tools)
 
   if [ "$json" = "--json" ]; then
     printf '{"ok":'

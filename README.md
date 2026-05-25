@@ -12,8 +12,8 @@ Reusable SwiftUI app substrate. Docs live in `ios-substrate-docs`.
   false-green verification, Python tooling lint, editorconfig, markdown, YAML,
   JSON, shell, typo, package-test, and product-neutrality gates.
 - CLI config discovery: `iosx path` exposes every strict config used by public
-  gates, and `iosx doctor` fails when any exposed helper or gate config is
-  missing.
+  gates, and `iosx doctor` fails when any exposed helper, gate config, or
+  required external gate tool is missing.
 - Runtime boundary: substrate ships Swift app primitives and local development
   tools only. Python is used only to implement and dogfood local gate scripts;
   no consumer app runtime depends on Python.

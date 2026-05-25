@@ -8,6 +8,8 @@ discovery commands support JSON where agents need stable parsing. Current gate
 runner internals use Python only as local developer tooling, and the substrate
 gates compile and lint those scripts before consumer repos inherit them.
 Consumer app runtimes stay Swift/native and do not depend on Python.
+`iosx doctor` fails fast when a public helper, strict config file, or external
+gate binary is missing.
 
 ## Install
 
