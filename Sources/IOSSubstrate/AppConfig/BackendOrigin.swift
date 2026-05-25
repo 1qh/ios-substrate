@@ -17,6 +17,7 @@ public struct BackendOrigin: Equatable, Sendable {
         guard let host = url.host(percentEncoded: false), !host.isEmpty else {
             throw SubstrateConfigError.invalidURL("backend origin requires host")
         }
+
         if trustLevel == .production {
             guard scheme == "https" else {
                 throw SubstrateConfigError.invalidURL("production backend origin requires https")

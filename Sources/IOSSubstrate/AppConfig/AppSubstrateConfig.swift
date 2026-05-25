@@ -9,7 +9,7 @@ public struct AppSubstrateConfig: Equatable, Sendable {
     public init(
         identity: AppIdentity,
         backendOrigin: BackendOrigin,
-        releaseChannel: ReleaseChannel = try! ReleaseChannel(),
+        releaseChannel: ReleaseChannel = .manual,
         telemetry: TelemetryConfig = TelemetryConfig(),
     ) {
         self.identity = identity

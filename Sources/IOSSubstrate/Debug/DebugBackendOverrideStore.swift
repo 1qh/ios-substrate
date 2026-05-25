@@ -11,7 +11,10 @@ public struct DebugBackendOverrideStore: Sendable {
     }
 
     public func load() -> URL? {
-        guard let raw = store.string(forKey: key) else { return nil }
+        guard let raw = store.string(forKey: key) else {
+            return nil
+        }
+
         return URL(string: raw)
     }
 

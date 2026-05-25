@@ -9,8 +9,13 @@ public struct TelemetryConfig: Equatable, Sendable {
         self.analyticsAPIKey = Self.normalizedOptional(analyticsAPIKey)
     }
 
-    public var sentryEnabled: Bool { sentryDSN != nil }
-    public var analyticsEnabled: Bool { analyticsAPIKey != nil }
+    public var sentryEnabled: Bool {
+        sentryDSN != nil
+    }
+
+    public var analyticsEnabled: Bool {
+        analyticsAPIKey != nil
+    }
 
     private static func normalizedOptional(_ value: String?) -> String? {
         let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)

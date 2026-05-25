@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+import argparse
+import fnmatch
+import json
+import os
+import shutil
+import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Optional
+
+ROOT = Path(__file__).resolve().parents[2]
+EXCLUDED_DIRS = {'.git', '.build', '.swiftpm', 'DerivedData', 'build', 'node_modules'}
+
+
+@dataclass(frozen=True)
+class Gate:
+    label: str
+    command: List[str]
+    applies: bool = True
+    reason: str = ''
+
+
+def project_files(pattern: str) -> List[str]:
+    matches: List[str] = []
+    for path in ROOT.rglob(pattern):
+        if any(part in EXCLUDED_DIRS for part in path.relative_to(ROOT).parts):
+            continue
+        if path.is_file():
+            matches.append(str(path.relative_to(ROOT)))
+    return sorted(matches)
+
+
+def has_any(paths: List[str]) -> bool:
+    return len(paths) > 0
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description='Run product-neutral iOS substrate quality gates.')
+    parser.add_argument('--selftest', action='store_true')
+    parser.add_argument('--list-gates', action='store_true')
+    parser.add_argument('--only')
+    parser.add_argument('--from', dest='from_gate')
+    parser.add_argument('--after')
+    return parser.parse_args()
+
+
+def gate_matches(selector: Optional[str], index: int, label: str) -> bool:
+    if selector is None:
+        return False
+    if selector.isdigit():
+        return selector == str(index)
+    return selector in label
+
+
+def selected_gates(gates: List[Gate], args: argparse.Namespace):
+    selected = []
+    from_reached = args.from_gate is None
+    after_reached = args.after is None
+    for index, gate in enumerate(gates, start=1):
+        if args.only is not None:
+            if gate_matches(args.only, index, gate.label):
+                selected.append((index, gate))
+            continue
+        if args.after is not None:
+            if not after_reached:
+                if gate_matches(args.after, index, gate.label):
+                    after_reached = True
+                continue
+            selected.append((index, gate))
+            continue
+        if args.from_gate is not None:
+            if not from_reached and gate_matches(args.from_gate, index, gate.label):
+                from_reached = True
+            if from_reached:
+                selected.append((index, gate))
+            continue
+        selected.append((index, gate))
+    return selected
+
+
+def run(command: List[str]) -> None:
+    tool = command[0]
+    if shutil.which(tool) is None:
+        print(f"FAIL: missing required tool: {tool}", file=sys.stderr)
+        sys.exit(1)
+    result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
+    if result.returncode != 0:
+        print(f"\nFAIL: {' '.join(command)}", file=sys.stderr)
+        if result.stdout:
+            print(result.stdout, file=sys.stderr, end='')
+        if result.stderr:
+            print(result.stderr, file=sys.stderr, end='')
+        sys.exit(result.returncode or 1)
+
+
+def json_syntax_gate(paths: List[str]) -> List[str]:
+    code = (
+        'import json, pathlib, sys\n'
+        'ok=True\n'
+        'for raw in sys.argv[1:]:\n'
+        '    try:\n'
+        '        json.loads(pathlib.Path(raw).read_text())\n'
+        '    except Exception as exc:\n'
+        '        print(f"{raw}: {exc}", file=sys.stderr)\n'
+        '        ok=False\n'
+        'raise SystemExit(0 if ok else 1)\n'
+    )
+    return ['python3', '-c', code, *paths]
+
+
+def product_neutral_gate() -> List[str]:
+    code = r'''
+import pathlib
+import re
+import sys
+blocked = re.compile(r'\b(chat|truecare|sse|citation|streaming)\b', re.IGNORECASE)
+allow = {
+    pathlib.Path('tools/lint/run-all.py'),
+}
+violations = []
+for path in pathlib.Path('.').rglob('*'):
+    if not path.is_file():
+        continue
+    if any(part in {'.git', '.build', '.swiftpm'} for part in path.parts):
+        continue
+    if path in allow:
+        continue
+    try:
+        text = path.read_text(errors='ignore')
+    except Exception:
+        continue
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if blocked.search(line):
+            violations.append(f'{path}:{line_number}: product-specific term')
+if violations:
+    print('\n'.join(violations), file=sys.stderr)
+    raise SystemExit(1)
+'''
+    return ['python3', '-c', code]
+
+
+def selftest() -> None:
+    cases = [
+        ('3', 3, 'swiftlint lint --strict', True),
+        ('3', 13, 'markdownlint-cli2', False),
+        ('swiftlint', 3, 'swiftlint lint --strict', True),
+        ('swiftlint', 4, 'swiftformat --lint', False),
+    ]
+    failed = [case for case in cases if gate_matches(case[0], case[1], case[2]) != case[3]]
+    if failed:
+        print('FAIL: selector selftest failed', file=sys.stderr)
+        for selector, index, label, expected in failed:
+            print(f'selector={selector} index={index} label={label} expected={expected}', file=sys.stderr)
+        sys.exit(1)
+    print('ok')
+
+
+def gates() -> List[Gate]:
+    swift_roots = [p for p in ['Sources', 'Tests'] if (ROOT / p).exists()]
+    shell_files = []
+    for candidate in project_files('*'):
+        if not candidate.startswith('tools/'):
+            continue
+        try:
+            first_line = (ROOT / candidate).read_text(errors='ignore').splitlines()[0]
+        except IndexError:
+            continue
+        if first_line.startswith('#!') and ('sh' in first_line or 'bash' in first_line):
+            shell_files.append(candidate)
+    shell_files = sorted(set(shell_files))
+    markdown_files = project_files('*.md')
+    yaml_files = project_files('*.yml') + project_files('*.yaml')
+    toml_files = project_files('*.toml')
+    json_files = project_files('*.json')
+    make_files = [p for p in ['Makefile'] if (ROOT / p).exists()] + project_files('*.mk')
+
+    result: List[Gate] = [
+        Gate('run-all selector selftest', [str(Path('tools/lint/run-all.py')), '--selftest']),
+        Gate('swift package tests', ['swift', 'test']),
+        Gate(
+            'shellcheck product-neutral scripts',
+            ['shellcheck', '-x', *shell_files],
+            applies=has_any(shell_files),
+            reason='no shell scripts',
+        ),
+        Gate(
+            'shfmt product-neutral scripts',
+            ['shfmt', '-d', '-i', '2', '-ci', '-bn', *shell_files],
+            applies=has_any(shell_files),
+            reason='no shell scripts',
+        ),
+        Gate(
+            'swiftlint strict Swift roots',
+            ['swiftlint', 'lint', '--strict', '--config', 'templates/strict-swiftlint.yml', *swift_roots],
+            applies=has_any(swift_roots),
+            reason='no Swift roots',
+        ),
+        Gate(
+            'swiftformat lint Swift roots',
+            ['swiftformat', '--lint', '--config', 'templates/strict-swiftformat.config', *swift_roots],
+            applies=has_any(swift_roots),
+            reason='no Swift roots',
+        ),
+        Gate('editorconfig checker', ['editorconfig-checker', '-config', 'templates/strict-editorconfig-checker.json']),
+        Gate('typos repository scan', ['typos', '--hidden', '--exclude', '.git', '--exclude', '.build', '--exclude', '.swiftpm']),
+        Gate(
+            'yamllint strict YAML',
+            ['yamllint', '-s', '-c', 'templates/strict-yamllint.yml', *yaml_files],
+            applies=has_any(yaml_files),
+            reason='no YAML files',
+        ),
+        Gate(
+            'taplo TOML lint',
+            ['taplo', 'lint', '--colors', 'never', *toml_files],
+            applies=has_any(toml_files),
+            reason='no TOML files',
+        ),
+        Gate(
+            'JSON syntax gate',
+            json_syntax_gate(json_files),
+            applies=has_any(json_files),
+            reason='no JSON files',
+        ),
+        Gate(
+            'checkmake Makefiles',
+            ['checkmake', '--config=templates/strict-checkmake.ini', *make_files],
+            applies=has_any(make_files),
+            reason='no Makefiles',
+        ),
+        Gate(
+            'markdownlint current docs',
+            [
+                'markdownlint-cli2',
+                '--config',
+                'templates/strict-markdownlint.json',
+                '**/*.md',
+                '#.git',
+                '#**/.build/**',
+                '#**/.swiftpm/**',
+            ],
+            applies=has_any(markdown_files),
+            reason='no markdown files',
+        ),
+        Gate(
+            'lychee offline docs links',
+            ['lychee', '--no-progress', '--offline', *markdown_files],
+            applies=has_any(markdown_files),
+            reason='no markdown files',
+        ),
+        Gate('product-neutral substrate terms', product_neutral_gate()),
+    ]
+    return result
+
+
+def main() -> None:
+    args = parse_args()
+    if args.selftest:
+        selftest()
+        return
+
+    all_gates = gates()
+    if args.list_gates:
+        for index, gate in enumerate(all_gates, start=1):
+            status = 'active' if gate.applies else f'not-applicable: {gate.reason}'
+            print(f'{index}\t{status}\t{gate.label}')
+        return
+
+    for index, gate in selected_gates(all_gates, args):
+        if not gate.applies:
+            print(f'not-applicable {index}: {gate.label} — {gate.reason}', file=sys.stderr)
+            continue
+        run(gate.command)
+    print('ok')
+
+
+if __name__ == '__main__':
+    main()

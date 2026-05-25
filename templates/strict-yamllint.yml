@@ -1,0 +1,30 @@
+extends: default
+
+ignore: |
+  .git/
+  .build/
+  .swiftpm/
+  build/
+  DerivedData/
+
+rules:
+  line-length:
+    max: 200
+    level: warning
+  document-start: disable
+  truthy:
+    allowed-values: ["true", "false", "yes", "no", "YES", "NO"]
+  indentation:
+    spaces: 2
+    indent-sequences: true
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: enable
+  empty-lines:
+    max: 2
+  trailing-spaces: enable
+  new-line-at-end-of-file: enable
+  brackets:
+    max-spaces-inside: 1
+  braces:
+    max-spaces-inside: 1

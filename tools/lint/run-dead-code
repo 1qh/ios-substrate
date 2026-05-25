@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+command -v periphery >/dev/null || {
+  echo "missing required tool: periphery" >&2
+  exit 1
+}
+
+periphery scan \
+  --retain-public \
+  --strict \
+  --quiet \
+  --disable-update-check \
+  --relative-results \
+  -- \
+  --disable-sandbox

@@ -1,0 +1,206 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+ios-device: product-neutral iOS development helpers
+
+Commands:
+  simulator-udid --name <simulator-name>
+  physical-device-udid
+  team-id [--team-id <id>] [--team-name <name>]
+  lan-url --port <port> [--scheme http|https]
+
+Environment fallbacks:
+  IOS_SUBSTRATE_SIMULATOR_NAME
+  TEAM_ID
+  TEAM_NAME
+EOF
+}
+
+fail() {
+  printf 'ios-device: %s\n' "$1" >&2
+  exit 1
+}
+
+require_value() {
+  local name="$1"
+  local value="${2:-}"
+  if [ -z "$value" ]; then
+    fail "$name is required"
+  fi
+}
+
+simulator_udid() {
+  local name="${IOS_SUBSTRATE_SIMULATOR_NAME:-}"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --name)
+        shift
+        name="${1:-}"
+        ;;
+      *) fail "unknown simulator-udid option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--name' "$name"
+  SIM_NAME="$name" xcrun simctl list devices -j 2>/dev/null | python3 -c '
+import json
+import os
+import sys
+name = os.environ["SIM_NAME"]
+data = json.load(sys.stdin)
+for runtime_devices in data.get("devices", {}).values():
+    for device in runtime_devices:
+        if device.get("name") == name and device.get("isAvailable"):
+            print(device.get("udid", ""))
+            raise SystemExit(0)
+raise SystemExit(2)
+' || fail "simulator not found: $name"
+}
+
+physical_device_udid() {
+  local udid
+  udid="$(xcrun devicectl list devices 2>/dev/null | python3 -c '
+import re
+import sys
+text = sys.stdin.read()
+pattern = re.compile(r"([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})")
+for line in text.splitlines():
+    lowered = line.lower()
+    if "available" not in lowered or "identifier" in lowered:
+        continue
+    match = pattern.search(line)
+    if match:
+        print(match.group(1))
+        raise SystemExit(0)
+' || true)"
+  if [ -z "$udid" ]; then
+    udid="$(xcrun xctrace list devices 2>/dev/null | python3 -c '
+import re
+import sys
+text = sys.stdin.read()
+patterns = [
+    re.compile(r"([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})"),
+    re.compile(r"([0-9A-Fa-f]{8}-[0-9A-Fa-f]{16})"),
+]
+for line in text.splitlines():
+    if "iPhone" not in line or "Simulator" in line:
+        continue
+    for pattern in patterns:
+        match = pattern.search(line)
+        if match:
+            print(match.group(1))
+            raise SystemExit(0)
+' || true)"
+  fi
+  require_value 'physical device UDID' "$udid"
+  printf '%s\n' "$udid"
+}
+
+team_id() {
+  local explicit_team_id="${TEAM_ID:-}"
+  local team_name="${TEAM_NAME:-}"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --team-id)
+        shift
+        explicit_team_id="${1:-}"
+        ;;
+      --team-name)
+        shift
+        team_name="${1:-}"
+        ;;
+      *) fail "unknown team-id option: $1" ;;
+    esac
+    shift || true
+  done
+  if printf '%s' "$explicit_team_id" | grep -Eq '^[A-Z0-9]{10}$'; then
+    printf '%s\n' "$explicit_team_id"
+    return
+  fi
+
+  local profile=""
+  profile="$(find "${HOME}/Library/Developer/Xcode/UserData/Provisioning Profiles" -type f -name "*.mobileprovision" -exec stat -f "%m %N" {} + 2>/dev/null | sort -rn | sed "s/^[0-9]* //" | head -1 || true)"
+  if [ -n "$profile" ]; then
+    local plist
+    plist="$(mktemp -t ios-substrate-profile.XXXXXX.plist)"
+    if security cms -D -i "$profile" >"$plist" 2>/dev/null; then
+      local profile_team
+      profile_team="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$plist" 2>/dev/null || true)"
+      rm -f "$plist"
+      if printf '%s' "$profile_team" | grep -Eq '^[A-Z0-9]{10}$'; then
+        printf '%s\n' "$profile_team"
+        return
+      fi
+    else
+      rm -f "$plist"
+    fi
+  fi
+
+  local identity_filter='Apple Development:'
+  if [ -n "$team_name" ]; then
+    identity_filter="Apple Development: $team_name ("
+  fi
+  local cert_team
+  cert_team="$(security find-identity -v -p codesigning 2>/dev/null | grep -F "$identity_filter" | sed -nE 's/.*\(([A-Z0-9]{10})\).*/\1/p' | head -1 || true)"
+  require_value 'Apple development team id' "$cert_team"
+  printf '%s\n' "$cert_team"
+}
+
+lan_url() {
+  local port=""
+  local scheme="http"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --port)
+        shift
+        port="${1:-}"
+        ;;
+      --scheme)
+        shift
+        scheme="${1:-}"
+        ;;
+      *) fail "unknown lan-url option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--port' "$port"
+  case "$scheme" in
+    http | https) ;;
+    *) fail '--scheme must be http or https' ;;
+  esac
+  local ip=""
+  ip="$(ipconfig getifaddr en0 2>/dev/null || true)"
+  if [ -z "$ip" ]; then
+    ip="$(ipconfig getifaddr en1 2>/dev/null || true)"
+  fi
+  require_value 'LAN IP address' "$ip"
+  printf '%s://%s:%s\n' "$scheme" "$ip" "$port"
+}
+
+case "${1:-}" in
+  simulator-udid)
+    shift
+    simulator_udid "$@"
+    ;;
+  physical-device-udid)
+    shift
+    physical_device_udid "$@"
+    ;;
+  team-id)
+    shift
+    team_id "$@"
+    ;;
+  lan-url)
+    shift
+    lan_url "$@"
+    ;;
+  help | --help | -h)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac

@@ -1,15 +1,16 @@
 import Foundation
 
 public enum SubstrateConfigError: Error, Equatable, CustomStringConvertible, Sendable {
-    case missingValue(String)
     case invalidURL(String)
+    case missingValue(String)
 
     public var description: String {
         switch self {
-        case let .missingValue(name):
-            return "Missing required config: \(name)"
         case let .invalidURL(reason):
-            return "Invalid URL config: \(reason)"
+            "Invalid URL config: \(reason)"
+
+        case let .missingValue(name):
+            "Missing required config: \(name)"
         }
     }
 }
@@ -20,6 +21,7 @@ extension String {
         guard !trimmed.isEmpty else {
             return .failure(.missingValue(name))
         }
+
         return .success(trimmed)
     }
 }
