@@ -47,6 +47,4 @@ periphery scan \
   --quiet \
   --disable-update-check \
   --relative-results \
-  ${args[@]+"${args[@]}"} \
-  -- \
-  --disable-sandbox
+  ${args[@]+"${args[@]}"}
