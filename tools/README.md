@@ -10,7 +10,7 @@ Runs the fast generic quality gates for this package:
 - shellcheck and shfmt for shell scripts.
 - SwiftLint strict, SwiftFormat lint, and shared launch-config access checks for Swift roots.
 - false-green shell verification checks for scripts and Makefiles.
-- editorconfig, typos, YAML, TOML, JSON, markdown, and offline markdown link checks.
+- Python syntax/Ruff checks, editorconfig, typos, YAML, TOML, JSON, markdown, and offline markdown link checks.
 - product-neutrality scan for terms that belong in consumer apps.
 
 Selectors are available for fast local iteration:

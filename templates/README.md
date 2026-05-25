@@ -7,6 +7,7 @@ Product-neutral defaults for strict iOS app repositories.
 - `strict-checkmake.ini` — Makefile lint baseline.
 - `strict-editorconfig-checker.json` — whitespace and file hygiene baseline.
 - `strict-markdownlint.json` — Markdown baseline.
+- `strict-ruff.toml` — Python tooling lint baseline.
 - `strict-swiftformat.config` — SwiftFormat style baseline.
 - `strict-swiftlint.yml` — SwiftLint strictness baseline.
 - `strict-yamllint.yml` — YAML baseline.
