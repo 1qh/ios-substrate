@@ -13,7 +13,7 @@ Commands:
   device <ios-device args...>
   sim <ios-sim args...>
   xcode <ios-xcode args...>
-  path [--json] root|checkmake-config|editorconfig-checker-config|markdownlint-config|ruff-config|swiftformat-config|swiftlint-config|yamllint-config
+  path [--json] root|checkmake-config|editorconfig-checker-config|markdownlint-config|ruff-config|swiftformat-config|swiftlint-config|typos-config|yamllint-config
   lint swift-gates <run-swift-gates args...>
   lint swiftformat <swiftformat args...>
   lint false-green <no-false-green-verify args...>
@@ -74,6 +74,7 @@ templates/strict-editorconfig-checker.json
 templates/strict-markdownlint.json
 templates/strict-ruff.toml
 templates/strict-yamllint.yml
+_typos.toml
 PATHS
 }
 
@@ -188,6 +189,9 @@ path_value() {
     swiftformat-config)
       value="$ROOT/templates/strict-swiftformat.config"
       ;;
+    typos-config)
+      value="$ROOT/_typos.toml"
+      ;;
     yamllint-config)
       value="$ROOT/templates/strict-yamllint.yml"
       ;;
@@ -212,7 +216,7 @@ commands() {
 {"commands":[
   {"name":"doctor","usage":"iosx doctor [--json]","purpose":"verify the installed substrate CLI can find every required reusable helper"},
   {"name":"version","usage":"iosx version [--json]","purpose":"print the substrate git revision behind this iosx installation"},
-  {"name":"path","usage":"iosx path [--json] root|checkmake-config|editorconfig-checker-config|markdownlint-config|ruff-config|swiftformat-config|swiftlint-config|yamllint-config","purpose":"print canonical paths for tools that require config files"},
+  {"name":"path","usage":"iosx path [--json] root|checkmake-config|editorconfig-checker-config|markdownlint-config|ruff-config|swiftformat-config|swiftlint-config|typos-config|yamllint-config","purpose":"print canonical paths for tools that require config files"},
   {"name":"device","usage":"iosx device <subcommand> [args...]","purpose":"run physical-device and LAN discovery helpers"},
   {"name":"sim","usage":"iosx sim <subcommand> [args...]","purpose":"run simulator boot/install/launch/reset/push helpers"},
   {"name":"xcode","usage":"iosx xcode <subcommand> [args...]","purpose":"create generic Xcode helper artifacts"},

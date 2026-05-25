@@ -32,6 +32,7 @@ iosx doctor --json
 iosx version --json
 iosx path --json swiftlint-config
 iosx path --json markdownlint-config
+iosx path --json typos-config
 ```
 
 Do not call substrate helper files directly from consumer repos. If a generic
@@ -182,5 +183,6 @@ iosx path markdownlint-config
 iosx path ruff-config
 iosx path swiftlint-config
 iosx path swiftformat-config
+iosx path typos-config
 iosx path yamllint-config
 ```

@@ -27,8 +27,14 @@ internal func `ios device tool provides help`() throws {
 internal func `substrate templates stay product neutral`() throws {
     let rootURL = packageRoot()
     let templatePaths = [
+        "_typos.toml",
+        "templates/strict-checkmake.ini",
+        "templates/strict-editorconfig-checker.json",
+        "templates/strict-markdownlint.json",
+        "templates/strict-ruff.toml",
         "templates/strict-swiftformat.config",
         "templates/strict-swiftlint.yml",
+        "templates/strict-yamllint.yml",
     ]
 
     for templatePath in templatePaths {
