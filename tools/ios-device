@@ -8,6 +8,8 @@ ios-device: product-neutral iOS development helpers
 Commands:
   simulator-udid --name <simulator-name>
   physical-device-udid
+  list-devices --json-output <path> [--table-output <path>]
+  app-info --device <udid> --bundle-id <bundle-id> --json-output <path>
   install-launch --app <app-path> --bundle-id <bundle-id> [--device <udid>]
   team-id [--team-id <id>] [--team-name <name>]
   lan-url --port <port> [--scheme http|https]
@@ -97,6 +99,59 @@ for line in text.splitlines():
   fi
   require_value 'physical device UDID' "$udid"
   printf '%s\n' "$udid"
+}
+
+list_devices() {
+  local json_output=""
+  local table_output=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --json-output)
+        shift
+        json_output="${1:-}"
+        ;;
+      --table-output)
+        shift
+        table_output="${1:-}"
+        ;;
+      *) fail "unknown list-devices option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--json-output' "$json_output"
+  if [ -n "$table_output" ]; then
+    xcrun devicectl list devices --json-output "$json_output" >"$table_output"
+  else
+    xcrun devicectl list devices --json-output "$json_output"
+  fi
+}
+
+app_info() {
+  local udid=""
+  local bundle_id=""
+  local json_output=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --device)
+        shift
+        udid="${1:-}"
+        ;;
+      --bundle-id)
+        shift
+        bundle_id="${1:-}"
+        ;;
+      --json-output)
+        shift
+        json_output="${1:-}"
+        ;;
+      *) fail "unknown app-info option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--device' "$udid"
+  require_value '--bundle-id' "$bundle_id"
+  require_value '--json-output' "$json_output"
+  xcrun devicectl device info apps --device "$udid" --bundle-id "$bundle_id" --json-output "$json_output"
 }
 
 install_launch() {
@@ -221,6 +276,14 @@ case "${1:-}" in
   physical-device-udid)
     shift
     physical_device_udid "$@"
+    ;;
+  list-devices)
+    shift
+    list_devices "$@"
+    ;;
+  app-info)
+    shift
+    app_info "$@"
     ;;
   install-launch)
     shift

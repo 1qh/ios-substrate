@@ -89,8 +89,9 @@ iosx lint false-green --selftest
 ## `lint/no-direct-ios-helper`
 
 Fails consumer Makefiles that reimplement product-neutral iOS helper snippets
-already owned by this substrate: simulator boot/install/launch/reset/push,
-ad-hoc simulator app signing, physical-device install/launch/discovery, LAN URL
+already owned by this substrate: simulator create/boot/list/install/launch/reset/push,
+simulator privacy/location/UI/log/app-container helpers, ad-hoc simulator app
+signing, physical-device install/launch/discovery/app inspection, LAN URL
 discovery, and generic ExportOptions plist writing.
 
 ```sh
@@ -118,6 +119,8 @@ Consumers provide project-specific values through arguments or environment varia
 ```sh
 iosx device simulator-udid --name "iPhone 17 Pro Max"
 iosx device physical-device-udid
+iosx device list-devices --json-output /tmp/devices.json
+iosx device app-info --device <core-device-udid> --bundle-id dev.example.app --json-output /tmp/apps.json
 iosx device install-launch --app /tmp/App.app --bundle-id dev.example.app
 iosx device team-id --team-name "Developer Name"
 iosx device lan-url --port 5174
@@ -129,11 +132,21 @@ Owns product-neutral simulator operations that otherwise tend to be copied into
 every app Makefile.
 
 ```sh
+iosx sim create-if-needed --name "iPhone 17 Pro Max" --device-type com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max
 iosx sim boot-wait --name "iPhone 17 Pro Max" --open
+iosx sim booted-udid --name "iPhone 17 Pro Max"
+iosx sim list-devices --booted
 iosx sim install --app /tmp/App.app --codesign retry
 iosx sim install-launch --app /tmp/App.app --bundle-id dev.example.app --codesign retry
+iosx sim launch --bundle-id dev.example.app --env DEBUG_CAPTURE=1
 iosx sim terminate --bundle-id dev.example.app
 iosx sim uninstall --bundle-id dev.example.app
+iosx sim privacy --service camera --bundle-id dev.example.app
+iosx sim location --latlng 21.0285,105.8542
+iosx sim ui --appearance dark
+iosx sim log-show --predicate 'subsystem == "dev.example.app"' --last 60s --info
+iosx sim log-stream --predicate 'subsystem == "dev.example.app"' --level info
+iosx sim app-container --bundle-id dev.example.app --type app
 iosx sim shutdown --device "iPhone 17 Pro Max"
 iosx sim keychain-reset
 iosx sim push --bundle-id dev.example.app --payload fixtures/push.apns

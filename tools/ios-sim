@@ -6,11 +6,23 @@ usage() {
 ios-sim: product-neutral simulator helpers
 
 Commands:
-  boot-wait --name <simulator-name> [--timeout <seconds>] [--open]
+  boot-wait --name <simulator-name|udid> [--timeout <seconds>] [--open]
+  udid --name <simulator-name>
+  booted-udid [--name <simulator-name>]
+  list-devices [--booted] [--json]
+  create-if-needed --name <simulator-name> --device-type <CoreSimulator-device-type> [--runtime latest-ios|runtime-id]
   install-launch --app <app-path> --bundle-id <bundle-id> [--device <booted|name|udid>] [--codesign <always|retry|never>] [--launch-retries <count>] [--launch-retry-delay <seconds>]
   install --app <app-path> [--device <booted|name|udid>] [--codesign <always|retry|never>]
+  launch --bundle-id <bundle-id> [--device <booted|name|udid>] [--terminate-running-process] [--console-pty] [--env KEY=VALUE...]
   terminate --bundle-id <bundle-id> [--device <booted|name|udid>]
   uninstall --bundle-id <bundle-id> [--device <booted|name|udid>]
+  bootstatus [--device <booted|name|udid>]
+  app-container --bundle-id <bundle-id> [--device <booted|name|udid>] [--type app|data|groups|group]
+  privacy --service <service> --bundle-id <bundle-id> [--device <booted|name|udid>] [--timeout <seconds>]
+  location --latlng <latitude,longitude> [--device <booted|name|udid>]
+  ui --appearance <light|dark> [--device <booted|name|udid>]
+  log-show --predicate <predicate> [--device <booted|name|udid>] [--last <duration>] [--info] [--style <style>]
+  log-stream --predicate <predicate> [--device <booted|name|udid>] [--level <level>]
   shutdown --device <all|name|udid>
   keychain-reset [--device <booted|name|udid>]
   push --bundle-id <bundle-id> --payload <payload-path> [--device <booted|name|udid>]
@@ -34,6 +46,133 @@ require_value() {
 
 require_tool() {
   command -v "$1" >/dev/null 2>&1 || fail "missing required tool: $1"
+}
+
+latest_ios_runtime() {
+  require_tool xcrun
+  require_tool jq
+  xcrun simctl list runtimes available -j \
+    | jq -r '.runtimes[] | select(.platform == "iOS" and .isAvailable == true) | .identifier' \
+    | tail -1
+}
+
+sim_udid() {
+  local name="${IOS_SUBSTRATE_SIMULATOR_NAME:-}"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --name)
+        shift
+        name="${1:-}"
+        ;;
+      *) fail "unknown udid option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--name' "$name"
+  require_tool xcrun
+  require_tool jq
+  local udid
+  udid="$(xcrun simctl list devices available -j \
+    | jq -r --arg name "$name" '.devices[][] | select(.name == $name and .isAvailable == true) | .udid' \
+    | head -1)"
+  require_value "simulator not found: $name" "$udid"
+  printf '%s\n' "$udid"
+}
+
+booted_udid() {
+  local name="${IOS_SUBSTRATE_SIMULATOR_NAME:-}"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --name)
+        shift
+        name="${1:-}"
+        ;;
+      *) fail "unknown booted-udid option: $1" ;;
+    esac
+    shift || true
+  done
+  require_tool xcrun
+  require_tool jq
+  local udid
+  if [ -n "$name" ]; then
+    udid="$(xcrun simctl list devices booted -j \
+      | jq -r --arg name "$name" '.devices[][] | select(.name == $name and .state == "Booted") | .udid' \
+      | head -1)"
+    require_value "booted simulator not found: $name" "$udid"
+  else
+    udid="$(xcrun simctl list devices booted -j \
+      | jq -r '.devices[][] | select(.state == "Booted") | .udid' \
+      | head -1)"
+    require_value 'booted simulator' "$udid"
+  fi
+  printf '%s\n' "$udid"
+}
+
+list_devices() {
+  local booted=0
+  local json=0
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --booted)
+        booted=1
+        ;;
+      --json)
+        json=1
+        ;;
+      *) fail "unknown list-devices option: $1" ;;
+    esac
+    shift || true
+  done
+  require_tool xcrun
+  local args=(simctl list devices)
+  if [ "$booted" -eq 1 ]; then
+    args+=(booted)
+  fi
+  if [ "$json" -eq 1 ]; then
+    args+=(-j)
+  fi
+  xcrun "${args[@]}"
+}
+
+create_if_needed() {
+  local name=""
+  local device_type=""
+  local runtime="latest-ios"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --name)
+        shift
+        name="${1:-}"
+        ;;
+      --device-type)
+        shift
+        device_type="${1:-}"
+        ;;
+      --runtime)
+        shift
+        runtime="${1:-}"
+        ;;
+      *) fail "unknown create-if-needed option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--name' "$name"
+  require_value '--device-type' "$device_type"
+  require_tool xcrun
+  require_tool jq
+  local udid=""
+  udid="$(xcrun simctl list devices available -j \
+    | jq -r --arg name "$name" '.devices[][] | select(.name == $name and .isAvailable == true) | .udid' \
+    | head -1)"
+  if [ -n "$udid" ]; then
+    printf '%s\n' "$udid"
+    return
+  fi
+  if [ "$runtime" = "latest-ios" ]; then
+    runtime="$(latest_ios_runtime)"
+  fi
+  require_value 'iOS runtime' "$runtime"
+  xcrun simctl create "$name" "$device_type" "$runtime"
 }
 
 codesign_app() {
@@ -66,6 +205,10 @@ boot_wait() {
         shift
         name="${1:-}"
         ;;
+      --device)
+        shift
+        name="${1:-}"
+        ;;
       --timeout)
         shift
         timeout="${1:-}"
@@ -92,6 +235,54 @@ boot_wait() {
     fi
     sleep 1
   done
+}
+
+launch_app() {
+  local bundle_id=""
+  local device="booted"
+  local terminate=0
+  local console_pty=0
+  local envs=()
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --bundle-id)
+        shift
+        bundle_id="${1:-}"
+        ;;
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      --terminate-running-process)
+        terminate=1
+        ;;
+      --console-pty)
+        console_pty=1
+        ;;
+      --env)
+        shift
+        envs+=("${1:-}")
+        ;;
+      *) fail "unknown launch option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--bundle-id' "$bundle_id"
+  require_value '--device' "$device"
+  local args=(simctl launch)
+  if [ "$terminate" -eq 1 ]; then
+    args+=(--terminate-running-process)
+  fi
+  if [ "$console_pty" -eq 1 ]; then
+    args+=(--console-pty)
+  fi
+  local env
+  for env in "${envs[@]}"; do
+    [[ "$env" == *=* ]] || fail '--env must be KEY=VALUE'
+    args+=(--setenv "${env%%=*}" "${env#*=}")
+  done
+  args+=("$device" "$bundle_id")
+  xcrun "${args[@]}"
 }
 
 install_launch() {
@@ -249,6 +440,223 @@ uninstall_app() {
   xcrun simctl uninstall "$device" "$bundle_id" >/dev/null 2>&1 || true
 }
 
+bootstatus_device() {
+  local device="booted"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      *) fail "unknown bootstatus option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--device' "$device"
+  xcrun simctl bootstatus "$device" -b
+}
+
+app_container() {
+  local bundle_id=""
+  local device="booted"
+  local kind="app"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --bundle-id)
+        shift
+        bundle_id="${1:-}"
+        ;;
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      --type)
+        shift
+        kind="${1:-}"
+        ;;
+      *) fail "unknown app-container option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--bundle-id' "$bundle_id"
+  require_value '--device' "$device"
+  case "$kind" in
+    app | data | groups | group) ;;
+    *) fail '--type must be app, data, groups, or group' ;;
+  esac
+  xcrun simctl get_app_container "$device" "$bundle_id" "$kind"
+}
+
+grant_privacy() {
+  local bundle_id=""
+  local device="booted"
+  local service=""
+  local timeout=10
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --bundle-id)
+        shift
+        bundle_id="${1:-}"
+        ;;
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      --service)
+        shift
+        service="${1:-}"
+        ;;
+      --timeout)
+        shift
+        timeout="${1:-}"
+        ;;
+      *) fail "unknown privacy option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--bundle-id' "$bundle_id"
+  require_value '--device' "$device"
+  require_value '--service' "$service"
+  [[ "$timeout" =~ ^[0-9]+$ ]] || fail '--timeout must be a positive integer'
+  xcrun simctl privacy "$device" grant "$service" "$bundle_id" >/dev/null 2>&1 &
+  local pid=$!
+  local deadline=$((SECONDS + timeout))
+  while kill -0 "$pid" >/dev/null 2>&1; do
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      kill "$pid" >/dev/null 2>&1 || true
+      wait "$pid" >/dev/null 2>&1 || true
+      return 0
+    fi
+    sleep 0.5
+  done
+  wait "$pid" >/dev/null 2>&1 || true
+}
+
+set_location() {
+  local device="booted"
+  local latlng=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      --latlng)
+        shift
+        latlng="${1:-}"
+        ;;
+      *) fail "unknown location option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--device' "$device"
+  require_value '--latlng' "$latlng"
+  xcrun simctl location "$device" set "$latlng"
+}
+
+set_ui() {
+  local device="booted"
+  local appearance=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      --appearance)
+        shift
+        appearance="${1:-}"
+        ;;
+      *) fail "unknown ui option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--device' "$device"
+  require_value '--appearance' "$appearance"
+  case "$appearance" in
+    light | dark) ;;
+    *) fail '--appearance must be light or dark' ;;
+  esac
+  xcrun simctl ui "$device" appearance "$appearance"
+}
+
+log_show() {
+  local device="booted"
+  local predicate=""
+  local last=""
+  local info=0
+  local style=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      --predicate)
+        shift
+        predicate="${1:-}"
+        ;;
+      --last)
+        shift
+        last="${1:-}"
+        ;;
+      --info)
+        info=1
+        ;;
+      --style)
+        shift
+        style="${1:-}"
+        ;;
+      *) fail "unknown log-show option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--device' "$device"
+  require_value '--predicate' "$predicate"
+  local args=(simctl spawn "$device" log show --predicate "$predicate")
+  if [ "$info" -eq 1 ]; then
+    args+=(--info)
+  fi
+  if [ -n "$last" ]; then
+    args+=(--last "$last")
+  fi
+  if [ -n "$style" ]; then
+    args+=(--style "$style")
+  fi
+  xcrun "${args[@]}"
+}
+
+log_stream() {
+  local device="booted"
+  local predicate=""
+  local level=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --device)
+        shift
+        device="${1:-}"
+        ;;
+      --predicate)
+        shift
+        predicate="${1:-}"
+        ;;
+      --level)
+        shift
+        level="${1:-}"
+        ;;
+      *) fail "unknown log-stream option: $1" ;;
+    esac
+    shift || true
+  done
+  require_value '--device' "$device"
+  require_value '--predicate' "$predicate"
+  local args=(simctl spawn "$device" log stream --predicate "$predicate")
+  if [ -n "$level" ]; then
+    args+=(--level "$level")
+  fi
+  xcrun "${args[@]}"
+}
+
 shutdown_device() {
   local device=""
   while [ "$#" -gt 0 ]; do
@@ -318,6 +726,22 @@ case "${1:-}" in
     shift
     boot_wait "$@"
     ;;
+  udid)
+    shift
+    sim_udid "$@"
+    ;;
+  booted-udid)
+    shift
+    booted_udid "$@"
+    ;;
+  create-if-needed)
+    shift
+    create_if_needed "$@"
+    ;;
+  list-devices)
+    shift
+    list_devices "$@"
+    ;;
   install-launch)
     shift
     install_launch "$@"
@@ -326,6 +750,10 @@ case "${1:-}" in
     shift
     install_app "$@"
     ;;
+  launch)
+    shift
+    launch_app "$@"
+    ;;
   terminate)
     shift
     terminate_app "$@"
@@ -333,6 +761,34 @@ case "${1:-}" in
   uninstall)
     shift
     uninstall_app "$@"
+    ;;
+  bootstatus)
+    shift
+    bootstatus_device "$@"
+    ;;
+  app-container)
+    shift
+    app_container "$@"
+    ;;
+  privacy)
+    shift
+    grant_privacy "$@"
+    ;;
+  location)
+    shift
+    set_location "$@"
+    ;;
+  ui)
+    shift
+    set_ui "$@"
+    ;;
+  log-show)
+    shift
+    log_show "$@"
+    ;;
+  log-stream)
+    shift
+    log_stream "$@"
     ;;
   shutdown)
     shift

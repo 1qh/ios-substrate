@@ -26,6 +26,16 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     ),
     ("direct simulator keychain reset", re.compile(r"\bxcrun\s+simctl\s+keychain\b"), "tools/ios-sim keychain-reset"),
     ("direct simulator push", re.compile(r"\bxcrun\s+simctl\s+push\b"), "tools/ios-sim push"),
+    ("direct simulator list", re.compile(r"\bxcrun\s+simctl\s+list\s+devices\b"), "tools/ios-sim list-devices"),
+    ("direct simulator logs", re.compile(r"\bxcrun\s+simctl\s+spawn\b"), "tools/ios-sim log-show/log-stream"),
+    ("direct simulator privacy", re.compile(r"\bxcrun\s+simctl\s+privacy\b"), "tools/ios-sim privacy"),
+    ("direct simulator location", re.compile(r"\bxcrun\s+simctl\s+location\b"), "tools/ios-sim location"),
+    ("direct simulator UI", re.compile(r"\bxcrun\s+simctl\s+ui\b"), "tools/ios-sim ui"),
+    (
+        "direct simulator app container",
+        re.compile(r"\bxcrun\s+simctl\s+get_app_container\b"),
+        "tools/ios-sim app-container",
+    ),
     ("direct ad-hoc app signing", re.compile(r"\bcodesign\s+--force\s+--sign\s+-\b"), "tools/ios-sim codesign-app"),
     (
         "direct device install",
@@ -40,7 +50,12 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     (
         "direct device discovery",
         re.compile(r"\bxcrun\s+devicectl\s+list\s+devices\b"),
-        "tools/ios-device physical-device-udid",
+        "tools/ios-device physical-device-udid/list-devices",
+    ),
+    (
+        "direct device app inspection",
+        re.compile(r"\bxcrun\s+devicectl\s+device\s+info\s+apps\b"),
+        "tools/ios-device app-info",
     ),
     ("direct LAN discovery", re.compile(r"\bipconfig\s+getifaddr\b"), "tools/ios-device lan-url"),
     (
@@ -96,14 +111,20 @@ def scan_text(text: str) -> list[str]:
 
 
 def selftest() -> None:
-    bad = "run:\n\t@xcrun simctl boot \"iPhone\"\n\t@xcrun simctl install booted App.app\n"
+    bad = (
+        "run:\n"
+        "\t@xcrun simctl boot \"iPhone\"\n"
+        "\t@xcrun simctl install booted App.app\n"
+        "\t@xcrun simctl list devices\n"
+    )
     good = (
         "run:\n"
         "\t@$(IOS_SIM_TOOL) boot-wait --name \"iPhone\"\n"
         "\t@$(IOS_SIM_TOOL) install-launch --app App.app --bundle-id x.y\n"
+        "\t@$(IOS_SIM_TOOL) list-devices\n"
     )
     export_bad = "\t@echo '<key>method</key><string>app-store-connect</string>' > /tmp/ExportOptions.plist\n"
-    checks = [len(scan_text(bad)) == 2, len(scan_text(good)) == 0, len(scan_text(export_bad)) == 1]
+    checks = [len(scan_text(bad)) == 3, len(scan_text(good)) == 0, len(scan_text(export_bad)) == 1]
     if not all(checks):
         print("FAIL: no-direct-ios-helper selftest failed", file=sys.stderr)
         sys.exit(1)
