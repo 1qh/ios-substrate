@@ -11,6 +11,7 @@ Product-neutral defaults for strict iOS app repositories.
 - `strict-swiftformat.config` — SwiftFormat style baseline.
 - `strict-swiftlint.yml` — SwiftLint strictness baseline.
 - `strict-yamllint.yml` — YAML baseline.
+- `../_typos.toml` — repository spelling dictionary baseline.
 
 The SwiftLint baseline owns semantic strictness, including test lifecycle,
 override/super-call, ownership, optional, force-use, raw-value, and type-safety
