@@ -13,8 +13,8 @@ Product-neutral defaults for strict iOS app repositories.
 
 The SwiftLint baseline owns semantic strictness, including test lifecycle,
 override/super-call, ownership, optional, force-use, raw-value, and type-safety
-rules. The SwiftFormat baseline owns deterministic layout and defers formatter
-rules that conflict with SwiftLint-owned semantics.
+rules. The SwiftFormat baseline owns deterministic layout and keeps formatter
+strictness enforced.
 
 Consumers copy these files only as app-level configuration. Reusable Swift code stays in package targets.
 App names, bundle identifiers, backend hosts, tester lists, and product behavior stay outside these templates.
