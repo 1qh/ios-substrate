@@ -38,6 +38,15 @@ internal func `info dictionary config trims required string values`() throws {
 }
 
 @Test
+internal func `info dictionary config treats unresolved xcode placeholders as absent`() throws {
+    let config = InfoDictionaryConfig(values: ["POSTHOG_API_KEY": "$(POSTHOG_API_KEY)"])
+    #expect(config.optionalString("POSTHOG_API_KEY") == nil)
+    #expect(throws: SubstrateConfigError.missingValue("POSTHOG_API_KEY")) {
+        _ = try config.requiredString("POSTHOG_API_KEY")
+    }
+}
+
+@Test
 internal func `info dictionary config parses explicit booleans`() throws {
     let config = InfoDictionaryConfig(dictionary: ["FEATURE_ON": "yes", "FEATURE_OFF": 0])
     #expect(try config.bool("FEATURE_ON") == true)

@@ -6,8 +6,7 @@ public struct InfoDictionaryConfig: Equatable, Sendable {
     public init(values: [String: String]) {
         self.values = values.reduce(into: [:]) { result, pair in
             let key = pair.key.trimmingCharacters(in: .whitespacesAndNewlines)
-            let value = pair.value.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !key.isEmpty, !value.isEmpty else {
+            guard let value = Self.normalizedString(pair.value), !key.isEmpty else {
                 return
             }
 
@@ -89,7 +88,7 @@ public struct InfoDictionaryConfig: Equatable, Sendable {
     private static func stringValue(_ raw: Any) -> String? {
         switch raw {
         case let string as String:
-            string
+            normalizedString(string)
 
         case let bool as Bool:
             bool ? "true" : "false"
@@ -103,5 +102,17 @@ public struct InfoDictionaryConfig: Equatable, Sendable {
         default:
             nil
         }
+    }
+
+    private static func normalizedString(_ raw: String) -> String? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return nil
+        }
+        guard !(trimmed.hasPrefix("$(") && trimmed.hasSuffix(")")) else {
+            return nil
+        }
+
+        return trimmed
     }
 }
