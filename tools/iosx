@@ -80,13 +80,18 @@ PATHS
 required_external_tools() {
   cat <<'TOOLS'
 checkmake
+codesign
 editorconfig-checker
+file
 git
+ipconfig
+jq
 lychee
 markdownlint-cli2
 periphery
 python3
 ruff
+security
 shellcheck
 shfmt
 swift
@@ -97,6 +102,12 @@ typos
 xcrun
 yamllint
 TOOLS
+}
+
+required_absolute_paths() {
+  cat <<'PATHS'
+/usr/libexec/PlistBuddy
+PATHS
 }
 
 doctor() {
@@ -115,6 +126,10 @@ doctor() {
   while IFS= read -r path; do
     command -v "$path" >/dev/null 2>&1 || missing+=("tool:$path")
   done < <(required_external_tools)
+
+  while IFS= read -r path; do
+    [ -x "$path" ] || missing+=("$path")
+  done < <(required_absolute_paths)
 
   if [ "$json" = "--json" ]; then
     printf '{"ok":'
