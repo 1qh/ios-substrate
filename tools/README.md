@@ -2,6 +2,11 @@
 
 Product-neutral command line helpers for iOS app repositories.
 
+The public contract is the extensionless command path. Current gate runner
+internals use Python only as local developer tooling, and the substrate gates
+compile and lint those scripts before consumer repos inherit them. Consumer app
+runtimes stay Swift/native and do not depend on Python.
+
 ## `lint/run-all`
 
 Runs the fast generic quality gates for this package:

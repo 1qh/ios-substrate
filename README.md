@@ -8,6 +8,9 @@ Reusable SwiftUI app substrate. Docs live in `ios-substrate-docs`.
 - Code primitives: app identity, Info.plist config parsing, backend origin validation, release channel config, telemetry toggles, and debug backend override storage.
 - Tooling primitives: strict SwiftFormat, SwiftLint, launch-config access, false-green verification, Python tooling lint,
   editorconfig, markdown, YAML, JSON, shell, typo, package-test, and product-neutrality gates.
+- Runtime boundary: substrate ships Swift app primitives and local development
+  tools only. Python is used only to implement and dogfood local gate scripts;
+  no consumer app runtime depends on Python.
 
 ## Gates
 
