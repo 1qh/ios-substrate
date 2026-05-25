@@ -146,6 +146,9 @@ def selftest() -> None:
         ('swiftlint', 4, 'swiftformat --lint', False),
     ]
     failed = [case for case in cases if gate_matches(case[0], case[1], case[2]) != case[3]]
+    missing_args = argparse.Namespace(only='missing-gate', from_gate=None, after=None)
+    if selected_gates([Gate('first', ['true'])], missing_args):
+        failed.append(('missing-gate', 1, 'first', False))
     if failed:
         print('FAIL: selector selftest failed', file=sys.stderr)
         for selector, index, label, expected in failed:
@@ -286,7 +289,13 @@ def main() -> None:
             print(f'{index}\t{status}\t{gate.label}')
         return
 
-    for index, gate in selected_gates(all_gates, args):
+    selected = selected_gates(all_gates, args)
+    if (args.only or args.from_gate or args.after) and not selected:
+        selector = args.only or args.from_gate or args.after
+        print(f'FAIL: selector did not select any gate: {selector}', file=sys.stderr)
+        sys.exit(1)
+
+    for index, gate in selected:
         if not gate.applies:
             print(f'not-applicable {index}: {gate.label} — {gate.reason}', file=sys.stderr)
             continue
