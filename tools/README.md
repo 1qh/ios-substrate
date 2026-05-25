@@ -29,6 +29,7 @@ iosx commands --json
 iosx doctor --json
 iosx version --json
 iosx path --json swiftlint-config
+iosx path --json markdownlint-config
 ```
 
 Do not call substrate helper files directly from consumer repos. If a generic
@@ -172,6 +173,11 @@ Prints installed substrate paths for tools that require a file path.
 
 ```sh
 iosx path root
+iosx path checkmake-config
+iosx path editorconfig-checker-config
+iosx path markdownlint-config
+iosx path ruff-config
 iosx path swiftlint-config
 iosx path swiftformat-config
+iosx path yamllint-config
 ```
