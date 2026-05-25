@@ -134,3 +134,13 @@ iosx xcode export-options \
   --signing-style automatic \
   --signing-certificate "Apple Distribution"
 ```
+
+## `iosx path`
+
+Prints installed substrate paths for tools that require a file path.
+
+```sh
+iosx path root
+iosx path swiftlint-config
+iosx path swiftformat-config
+```

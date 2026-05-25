@@ -3,8 +3,10 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SWIFTLINT_CONFIG="$ROOT/templates/strict-swiftlint.yml"
+SWIFTLINT_OVERLAY=""
 SWIFTFORMAT_CONFIG="$ROOT/templates/strict-swiftformat.config"
 ROOTS=()
+CLEANUP_FILES=()
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2
@@ -14,12 +16,41 @@ fail() {
 usage() {
   cat <<'EOF'
 Usage: tools/lint/run-swift-gates [--swiftlint-config PATH] [--swiftformat-config PATH] <swift-root>...
+  tools/lint/run-swift-gates [--swiftlint-overlay PATH] <swift-root>...
 
 Runs the reusable Swift gate bundle:
 - SwiftLint strict with the selected config.
 - SwiftFormat --lint with the selected config.
 - no-direct-bundle-config on the same Swift roots.
 EOF
+}
+
+cleanup() {
+  if [ "${#CLEANUP_FILES[@]}" -gt 0 ]; then
+    rm -f "${CLEANUP_FILES[@]}"
+  fi
+}
+trap cleanup EXIT
+
+build_swiftlint_overlay_config() {
+  local overlay="$1"
+  local merged
+  merged="$(mktemp -t iosx-swiftlint.XXXXXX.yml)"
+  CLEANUP_FILES+=("$merged")
+  {
+    printf 'parent_config: %s\n\n' "$SWIFTLINT_CONFIG"
+    python3 - "$overlay" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+for line in path.read_text().splitlines():
+    if line.strip().startswith('parent_config:'):
+        continue
+    print(line)
+PY
+  } >"$merged"
+  SWIFTLINT_CONFIG="$merged"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -38,6 +69,15 @@ while [ "$#" -gt 0 ]; do
       ;;
     --swiftlint-config=*)
       SWIFTLINT_CONFIG="${1#--swiftlint-config=}"
+      shift
+      ;;
+    --swiftlint-overlay)
+      [ "$#" -ge 2 ] || fail "--swiftlint-overlay requires a path"
+      SWIFTLINT_OVERLAY="$2"
+      shift 2
+      ;;
+    --swiftlint-overlay=*)
+      SWIFTLINT_OVERLAY="${1#--swiftlint-overlay=}"
       shift
       ;;
     --swiftformat-config)
@@ -66,6 +106,7 @@ done
 [ "${#ROOTS[@]}" -gt 0 ] || fail "at least one Swift root is required"
 [ -f "$SWIFTLINT_CONFIG" ] || fail "SwiftLint config not found: $SWIFTLINT_CONFIG"
 [ -f "$SWIFTFORMAT_CONFIG" ] || fail "SwiftFormat config not found: $SWIFTFORMAT_CONFIG"
+[ -z "$SWIFTLINT_OVERLAY" ] || [ -f "$SWIFTLINT_OVERLAY" ] || fail "SwiftLint overlay not found: $SWIFTLINT_OVERLAY"
 [ -x "$ROOT/tools/lint/no-direct-bundle-config" ] || fail "missing no-direct-bundle-config"
 command -v swiftlint >/dev/null 2>&1 || fail "missing required tool: swiftlint"
 command -v swiftformat >/dev/null 2>&1 || fail "missing required tool: swiftformat"
@@ -73,6 +114,10 @@ command -v swiftformat >/dev/null 2>&1 || fail "missing required tool: swiftform
 for root in "${ROOTS[@]}"; do
   [ -e "$root" ] || fail "Swift root not found: $root"
 done
+
+if [ -n "$SWIFTLINT_OVERLAY" ]; then
+  build_swiftlint_overlay_config "$SWIFTLINT_OVERLAY"
+fi
 
 swiftlint lint --strict --config "$SWIFTLINT_CONFIG" "${ROOTS[@]}"
 swiftformat --lint --config "$SWIFTFORMAT_CONFIG" "${ROOTS[@]}"

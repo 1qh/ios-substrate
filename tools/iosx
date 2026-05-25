@@ -12,6 +12,7 @@ Commands:
   device <ios-device args...>
   sim <ios-sim args...>
   xcode <ios-xcode args...>
+  path root|swiftlint-config|swiftformat-config
   lint swift-gates <run-swift-gates args...>
   lint swiftformat <swiftformat args...>
   lint false-green <no-false-green-verify args...>
@@ -51,6 +52,24 @@ doctor() {
   printf 'ok\n'
 }
 
+path_value() {
+  case "${1:-}" in
+    root)
+      printf '%s\n' "$ROOT"
+      ;;
+    swiftlint-config)
+      printf '%s\n' "$ROOT/templates/strict-swiftlint.yml"
+      ;;
+    swiftformat-config)
+      printf '%s\n' "$ROOT/templates/strict-swiftformat.config"
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+}
+
 case "${1:-}" in
   version)
     shift
@@ -73,6 +92,10 @@ case "${1:-}" in
   xcode)
     shift
     exec_tool "$ROOT/tools/ios-xcode" "$@"
+    ;;
+  path)
+    shift
+    path_value "$@"
     ;;
   lint)
     shift
