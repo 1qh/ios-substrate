@@ -124,7 +124,7 @@ signing, physical-device install/launch/discovery/app inspection, LAN URL
 discovery, and generic ExportOptions plist writing.
 
 ```sh
-iosx lint no-direct-ios-helper Makefile tools/make
+iosx lint no-direct-ios-helper Makefile scripts
 iosx lint no-direct-ios-helper --selftest
 ```
 

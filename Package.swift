@@ -1,6 +1,14 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
+let strictSwiftSettings: [SwiftSetting] = [
+    .enableExperimentalFeature("StrictConcurrency"),
+    .enableUpcomingFeature("ExistentialAny"),
+    .enableUpcomingFeature("InternalImportsByDefault"),
+    .enableUpcomingFeature("MemberImportVisibility"),
+    .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+]
+
 let package = Package(
     name: "IOSSubstrate",
     platforms: [
@@ -16,10 +24,12 @@ let package = Package(
     targets: [
         .target(
             name: "IOSSubstrate",
+            swiftSettings: strictSwiftSettings,
         ),
         .testTarget(
             name: "IOSSubstrateTests",
             dependencies: ["IOSSubstrate"],
+            swiftSettings: strictSwiftSettings,
         ),
     ],
 )

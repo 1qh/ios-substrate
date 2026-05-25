@@ -3,31 +3,50 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: tools/lint/run-dead-code [periphery scan args...]
+Usage: tools/lint/run-dead-code [--retain-public|--no-retain-public] [periphery scan args...]
 
 Runs the dedicated on-demand Periphery dead-code gate. This is intentionally
 kept out of the fast run-all loop.
 USAGE
 }
 
-case "${1:-}" in
-  --help | -h)
-    usage
-    exit 0
-    ;;
-esac
+retain_public=true
+args=()
+while [ "$#" -gt 0 ]; do
+  case "${1:-}" in
+    --help | -h)
+      usage
+      exit 0
+      ;;
+    --retain-public)
+      retain_public=true
+      ;;
+    --no-retain-public)
+      retain_public=false
+      ;;
+    *)
+      args+=("$1")
+      ;;
+  esac
+  shift
+done
 
 command -v periphery >/dev/null || {
   echo "missing required tool: periphery" >&2
   exit 1
 }
 
+periphery_args=()
+if [ "$retain_public" = true ]; then
+  periphery_args+=(--retain-public)
+fi
+
 periphery scan \
-  --retain-public \
+  ${periphery_args[@]+"${periphery_args[@]}"} \
   --strict \
   --quiet \
   --disable-update-check \
   --relative-results \
-  "$@" \
+  ${args[@]+"${args[@]}"} \
   -- \
   --disable-sandbox

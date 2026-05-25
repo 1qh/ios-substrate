@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 public struct BackendOrigin: Equatable, Sendable {
     public enum TrustLevel: Equatable, Sendable {

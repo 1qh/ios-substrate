@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 public struct DebugBackendOverrideStore: Sendable {
     private let key: String

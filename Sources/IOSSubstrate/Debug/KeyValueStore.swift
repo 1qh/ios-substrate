@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 public protocol KeyValueStore: Sendable {
     func string(forKey key: String) -> String?
