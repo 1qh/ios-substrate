@@ -31,12 +31,14 @@ Runs the dedicated dead-code gate with Periphery. This is explicit and on-demand
 ## `lint/run-swift-gates`
 
 Runs the reusable Swift lint bundle: SwiftLint strict, SwiftFormat lint, and
-`no-direct-bundle-config` over the same roots. Consumers may pass local configs
-when generated-code or product rules require an explicit overlay.
+`no-direct-bundle-config` over the same roots. Consumers may pass a local
+SwiftLint overlay when product rules are required; the overlay should inherit
+`templates/strict-swiftlint.yml` with `parent_config`. Consumers should use the
+substrate SwiftFormat config unless a product-only formatting rule is required.
 
 ```sh
 tools/lint/run-swift-gates Sources Tests
-tools/lint/run-swift-gates --swiftlint-config .swiftlint.yml --swiftformat-config .swiftformat App
+tools/lint/run-swift-gates --swiftlint-config .swiftlint.yml App
 ```
 
 ## `lint/no-false-green-verify`
