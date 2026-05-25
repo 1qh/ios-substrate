@@ -4,8 +4,8 @@ import PackageDescription
 let package = Package(
     name: "IOSSubstrate",
     platforms: [
-        .iOS(.v17),
-        .macOS(.v14),
+        .iOS(.v18),
+        .macOS("26.0"),
     ],
     products: [
         .library(
