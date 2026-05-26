@@ -186,3 +186,23 @@ internal func `app version info rejects missing or non numeric builds`() throws 
         _ = try AppVersionInfo.currentBuild(from: nonNumeric)
     }
 }
+
+@Test
+internal func `iso8601 date codec parses fractional and whole second internet dates`() throws {
+    let fractional = try #require(ISO8601DateCodec.parseInternetDateTime("2026-05-26T05:30:12.345Z"))
+    let wholeSecond = try #require(ISO8601DateCodec.parseInternetDateTime("2026-05-26T05:30:12Z"))
+
+    #expect(fractional.timeIntervalSince1970 > wholeSecond.timeIntervalSince1970)
+    #expect(ISO8601DateCodec.parseInternetDateTime("2026-05-26") == nil)
+}
+
+@Test
+internal func `iso8601 date codec formats fractional internet dates`() {
+    let date = Date(timeIntervalSince1970: 1_779_773_412.345)
+    let value = ISO8601DateCodec.string(from: date)
+
+    #expect(value.contains("T"))
+    #expect(value.contains("."))
+    #expect(value.hasSuffix("Z"))
+    #expect(ISO8601DateCodec.parseInternetDateTime(value) == date)
+}
