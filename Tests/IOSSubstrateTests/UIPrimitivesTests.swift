@@ -17,3 +17,14 @@ internal func `flow layout keeps explicit spacing and width`() {
     #expect(layout.spacing == 6)
     #expect(layout.maxWidth == 320)
 }
+
+@Test
+internal func `haptic feedback helpers are safe to call in tests`() {
+    HapticFeedback.light()
+    HapticFeedback.medium()
+    HapticFeedback.heavy()
+    HapticFeedback.success()
+    HapticFeedback.warning()
+    HapticFeedback.error()
+    HapticFeedback.selection()
+}
