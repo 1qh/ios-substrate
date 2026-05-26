@@ -156,6 +156,26 @@ internal final class InMemoryKeyValueStore: KeyValueStore, @unchecked Sendable {
     }
 }
 
+private struct DefaultsPayload: Codable, Equatable {
+    let name: String
+    let count: Int
+}
+
+@Test
+internal func `codable defaults store round trips and removes typed payloads`() throws {
+    let suiteName = "codable-defaults-\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: suiteName))
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    let store = CodableDefaultsStore<DefaultsPayload>(key: "payload", defaults: defaults)
+
+    #expect(try store.load() == nil)
+    try store.save(DefaultsPayload(name: "ready", count: 2))
+    #expect(try store.load() == DefaultsPayload(name: "ready", count: 2))
+
+    store.remove()
+    #expect(try store.load() == nil)
+}
+
 @Test
 internal func `app version info reads display and numeric build from info dictionary`() throws {
     let info = InfoDictionaryConfig(values: [
