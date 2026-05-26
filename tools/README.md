@@ -22,6 +22,9 @@ iosx doctor
 iosx doctor --fast
 ```
 
+Successful install prints `ok`. Why: agent sessions need a terse,
+machine-checkable success contract before they depend on `iosx`.
+
 Consumer repos should depend on `iosx`, not a checkout-relative tool path.
 
 ## Agent contract
