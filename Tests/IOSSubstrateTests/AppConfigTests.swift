@@ -26,9 +26,29 @@ internal func `auto invite requires beta group`() throws {
 
 @Test
 internal func `telemetry absence is off`() {
-    let config = TelemetryConfig(sentryDSN: " ", analyticsAPIKey: nil)
+    let config = TelemetryConfig(sentryDSN: " ", analyticsAPIKey: nil, deploymentEnvironment: " ")
     #expect(config.sentryEnabled == false)
     #expect(config.analyticsEnabled == false)
+    #expect(config.deploymentEnvironment == nil)
+}
+
+@Test
+internal func `telemetry reads bundle and launch environment values`() {
+    let info = InfoDictionaryConfig(values: [
+        TelemetryConfig.sentryDSNKey: "bundle-dsn",
+        TelemetryConfig.analyticsAPIKeyKey: "bundle-analytics",
+        TelemetryConfig.deploymentEnvironmentKey: "prod",
+    ])
+
+    let config = TelemetryConfig.read(
+        from: info,
+        environment: [TelemetryConfig.sentryDSNKey: " env-dsn "],
+    )
+
+    #expect(config.sentryDSN == "env-dsn")
+    #expect(config.analyticsAPIKey == "bundle-analytics")
+    #expect(config.deploymentEnvironment == "prod")
+    #expect(TelemetryConfig.defaultTracesSampleRate == 0.1)
 }
 
 @Test
