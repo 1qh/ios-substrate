@@ -139,6 +139,11 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         "IOSSubstrate.ISO8601DateCodec",
     ),
     (
+        "direct file data read",
+        re.compile(r"\bData\s*\(\s*contentsOf\s*:"),
+        "IOSSubstrate.CodableFileStore for Codable payload files",
+    ),
+    (
         "direct UIApplication URL open",
         re.compile(r"\bUIApplication\.shared\.open\s*\("),
         "IOSSubstrate.ExternalURLOpener",
@@ -249,6 +254,7 @@ func feedback() {
     if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) {}
     try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Unlock")
     UIApplication.shared.open(URL(string: "https://example.test")!)
+    _ = try Data(contentsOf: URL(fileURLWithPath: "/tmp/payload.json"))
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 }
@@ -301,6 +307,10 @@ struct ConsumerView: View {
                 _ = DisplayString.userContent("typed")
                 _ = LoadState<String, String>.loaded("ready").value
                 ExternalURLOpener.open(URL(string: "https://example.test")!)
+                _ = CodableFileStore<String>(
+                    fileURL: URL(fileURLWithPath: "/tmp/payload.json"),
+                    defaultValue: "missing",
+                )
             }
     }
 }
