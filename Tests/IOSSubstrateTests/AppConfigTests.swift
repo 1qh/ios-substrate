@@ -135,3 +135,34 @@ internal final class InMemoryKeyValueStore: KeyValueStore, @unchecked Sendable {
         values.removeValue(forKey: key)
     }
 }
+
+@Test
+internal func `app version info reads display and numeric build from info dictionary`() throws {
+    let info = InfoDictionaryConfig(values: [
+        AppVersionInfo.shortVersionKey: " 1.2.3 ",
+        AppVersionInfo.buildKey: "42",
+    ])
+
+    let version = try AppVersionInfo.read(appName: "  Map  ", from: info)
+
+    #expect(version.appName == "Map")
+    #expect(version.shortVersion == "1.2.3")
+    #expect(version.build == "42")
+    #expect(version.buildNumber == 42)
+    #expect(version.displayString == "Map 1.2.3 (42)")
+    #expect(try AppVersionInfo.currentBuild(from: info) == 42)
+    #expect(try AppVersionInfo.displayString(appName: "Map", from: info) == "Map 1.2.3 (42)")
+}
+
+@Test
+internal func `app version info rejects missing or non numeric builds`() throws {
+    let missing = InfoDictionaryConfig(values: [:])
+    #expect(throws: SubstrateConfigError.self) {
+        _ = try AppVersionInfo.currentBuild(from: missing)
+    }
+
+    let nonNumeric = InfoDictionaryConfig(values: [AppVersionInfo.buildKey: "abc"])
+    #expect(throws: SubstrateConfigError.self) {
+        _ = try AppVersionInfo.currentBuild(from: nonNumeric)
+    }
+}
