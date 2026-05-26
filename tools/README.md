@@ -263,7 +263,7 @@ Fails consumer Swift roots that copy substrate-owned primitives instead of
 importing `IOSSubstrate`. The gate currently blocks local `FlowLayout`,
 `PressScaleButtonStyle`, `ShimmerView`, `Base64URL`, and internet date-time
 codec copies, plus direct UIKit haptic generators and direct LocalAuthentication
-policy evaluation. Scope it to current app roots; do not point it at this
+context construction or policy evaluation. Scope it to current app roots; do not point it at this
 substrate package itself.
 
 ```sh

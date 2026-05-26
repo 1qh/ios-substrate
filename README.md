@@ -9,7 +9,7 @@ Reusable SwiftUI app substrate. Docs live in the sibling
 - Code primitives: app identity, Info.plist config parsing, backend origin
   validation, release channel config, telemetry keys/environment/trace defaults, cancellable async interaction delays,
   skeleton-loading shimmer UI, press-scale button feedback, wrapping flow layout, haptic feedback intents, ISO-8601 internet date codec, base64url codec,
-  biometric authentication, and debug backend override storage.
+  biometric authentication/non-interactive contexts, and debug backend override storage.
 - Tooling primitives: strict SwiftFormat, SwiftLint, launch-config access,
   substrate-adoption, false-green verification, Python tooling lint,
   editorconfig, markdown, YAML, JSON, shell, typo, CLI doctor, package-test,
