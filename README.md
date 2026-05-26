@@ -11,8 +11,9 @@ Reusable SwiftUI app substrate. Docs live in the sibling
   skeleton-loading shimmer UI, press-scale button feedback, wrapping flow layout, haptic feedback intents, base64url codec,
   biometric authentication, and debug backend override storage.
 - Tooling primitives: strict SwiftFormat, SwiftLint, launch-config access,
-  false-green verification, Python tooling lint, editorconfig, markdown, YAML,
-  JSON, shell, typo, CLI doctor, package-test, and product-neutrality gates.
+  substrate-adoption, false-green verification, Python tooling lint,
+  editorconfig, markdown, YAML, JSON, shell, typo, CLI doctor, package-test,
+  and product-neutrality gates.
 - CLI config discovery: `iosx path` exposes every strict config used by public
   gates, including the repository typo dictionary. `iosx doctor --fast` proves
   fast-loop helpers and gates; `iosx doctor --all` also proves dedicated
@@ -27,8 +28,10 @@ Reusable SwiftUI app substrate. Docs live in the sibling
 iosx lint run-all
 iosx lint run-all --list-gates
 iosx lint run-all --from swiftlint
+iosx lint substrate-adoption App
 iosx lint dead-code
 ```
 
-`iosx lint run-all` is the fast development gate. `iosx lint dead-code` is explicit because
+`iosx lint run-all` is the fast development gate. `iosx lint substrate-adoption` is the
+consumer-app guard against copied substrate-owned primitives. `iosx lint dead-code` is explicit because
 dead-code scans can be slower and should not block every small edit loop.
