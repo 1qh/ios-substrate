@@ -39,6 +39,16 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         re.compile(r"\bUISelectionFeedbackGenerator\s*\("),
         "IOSSubstrate.HapticFeedback",
     ),
+    (
+        "direct biometric capability policy",
+        re.compile(r"\.canEvaluatePolicy\s*\("),
+        "IOSSubstrate.BiometricAuthentication",
+    ),
+    (
+        "direct biometric evaluation policy",
+        re.compile(r"\.evaluatePolicy\s*\("),
+        "IOSSubstrate.BiometricAuthentication",
+    ),
 ]
 
 
@@ -134,6 +144,8 @@ func feedback() {
     UIImpactFeedbackGenerator(style: .light).impactOccurred()
     UINotificationFeedbackGenerator().notificationOccurred(.success)
     UISelectionFeedbackGenerator().selectionChanged()
+    if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) {}
+    try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Unlock")
 }
 """
     good = """
