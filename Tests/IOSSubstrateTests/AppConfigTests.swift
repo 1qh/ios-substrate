@@ -226,3 +226,34 @@ internal func `iso8601 date codec formats fractional internet dates`() {
     #expect(value.hasSuffix("Z"))
     #expect(ISO8601DateCodec.parseInternetDateTime(value) == date)
 }
+
+private struct FilePayload: Codable, Equatable {
+    let id: String
+    let timestamp: Date
+}
+
+@Test
+internal func `codable file store round trips typed payloads and removes files`() throws {
+    let temporaryDirectory = FileManager.default.temporaryDirectory
+    let directory = temporaryDirectory.appendingPathComponent("codable-file-store-\(UUID().uuidString)", isDirectory: true)
+    let fileURL = directory.appendingPathComponent("payload.json")
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let store = CodableFileStore<[FilePayload]>(
+        fileURL: fileURL,
+        defaultValue: [],
+        encoder: encoder,
+        decoder: decoder,
+    )
+    let payload = [FilePayload(id: "job-1", timestamp: Date(timeIntervalSince1970: 1_779_782_400))]
+
+    #expect(try store.load().isEmpty)
+    try store.save(payload)
+    #expect(try store.load() == payload)
+
+    try store.remove()
+    #expect(try store.load().isEmpty)
+}
