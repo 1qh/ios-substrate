@@ -50,6 +50,24 @@ internal func `load state exposes loaded value only for loaded phase`() {
 }
 
 @Test
+@MainActor
+internal func `load state content accepts every product owned renderer`() {
+    let loaded = LoadState<String, String>.loaded("ready")
+    let view = LoadStateContent(state: loaded) {
+        Text("Loading")
+    } content: { value in
+        Text(value)
+    } empty: {
+        Text("Empty")
+    } failed: { failure in
+        Text(failure)
+    }
+
+    _ = view.body
+    #expect(String(describing: type(of: view)).contains("LoadStateContent"))
+}
+
+@Test
 internal func `submit error keeps stable identity and product-owned copy`() {
     let id = UUID()
     let error = SubmitError(title: "Retry", message: "Network unavailable", id: id)
