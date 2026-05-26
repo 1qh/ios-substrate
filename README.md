@@ -8,8 +8,8 @@ Reusable SwiftUI app substrate. Docs live in the sibling
 - Swift package floor: iOS 18 and macOS 26.
 - Code primitives: app identity, Info.plist config parsing, backend origin
   validation, release channel config, telemetry keys/environment/trace defaults, cancellable async interaction delays,
-  skeleton-loading shimmer UI, base64url codec, biometric authentication, and
-  debug backend override storage.
+  skeleton-loading shimmer UI, press-scale button feedback, base64url codec,
+  biometric authentication, and debug backend override storage.
 - Tooling primitives: strict SwiftFormat, SwiftLint, launch-config access,
   false-green verification, Python tooling lint, editorconfig, markdown, YAML,
   JSON, shell, typo, CLI doctor, package-test, and product-neutrality gates.
