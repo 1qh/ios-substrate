@@ -291,9 +291,9 @@ def gates() -> list[Gate]:
         Gate(
             'markdownlint current docs',
             [
-                'markdownlint-cli2',
-                '--config',
-                'templates/strict-markdownlint.json',
+                str(Path('tools/iosx')),
+                'lint',
+                'markdown',
                 '**/*.md',
                 '#.git',
                 '#**/.build/**',

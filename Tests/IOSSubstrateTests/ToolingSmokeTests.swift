@@ -72,6 +72,7 @@ internal func `iosx command catalog dispatches every advertised command`() throw
         ("xcode", ["xcode", "--help"]),
         ("lint swift-gates", ["lint", "swift-gates", "--help"]),
         ("lint swiftformat", ["lint", "swiftformat", "--version"]),
+        ("lint markdown", ["lint", "markdown", "tools/README.md"]),
         ("lint false-green", ["lint", "false-green", "--selftest"]),
         ("lint no-direct-bundle-config", ["lint", "no-direct-bundle-config", "--selftest"]),
         ("lint no-direct-ios-helper", ["lint", "no-direct-ios-helper", "--selftest"]),

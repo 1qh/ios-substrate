@@ -41,6 +41,7 @@ iosx path --json markdownlint-config
 iosx path --json typos-config
 iosx lint run-all --selftest
 iosx lint dead-code --help
+iosx lint markdown tools/README.md
 iosx lint swiftformat --version
 ```
 
@@ -58,7 +59,8 @@ form for agents; `tools/lint/run-all` is the implementation behind it:
 - shellcheck and shfmt for shell scripts.
 - SwiftLint strict, SwiftFormat lint, and shared launch-config access checks for Swift roots.
 - false-green shell verification checks for scripts and Makefiles.
-- Python syntax/Ruff checks, editorconfig, typos, YAML, TOML, JSON, markdown, and offline markdown link checks.
+- Python syntax/Ruff checks, editorconfig, typos, YAML, TOML, JSON,
+  `iosx lint markdown`, and offline markdown link checks.
 - product-neutrality scan for terms that belong in consumer apps.
 
 Selectors are available for fast local iteration:
@@ -91,6 +93,16 @@ through `iosx` so formatting policy stays substrate-owned.
 
 ```sh
 iosx lint swiftformat --lint Sources Tests
+```
+
+## `iosx lint markdown`
+
+Runs Markdownlint with the substrate strict config. Consumers should use this
+public command instead of passing `iosx path markdownlint-config` to
+`markdownlint-cli2` themselves.
+
+```sh
+iosx lint markdown README.md docs/**/*.md
 ```
 
 ## `iosx lint swift-gates`
