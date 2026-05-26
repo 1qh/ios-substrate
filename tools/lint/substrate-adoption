@@ -80,6 +80,42 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         re.compile(r"\bfunc\s+errorAlert\s*\(\s*_\s+\w+\s*:\s*Binding\s*<\s*SubmitError\?\s*>"),
         "IOSSubstrate View.errorAlert",
     ),
+
+    (
+        "local adaptive symbol effect kind copy",
+        re.compile(r"\b(?:enum|struct)\s+TCSymbolEffectKind\b"),
+        "IOSSubstrate.AdaptiveSymbolEffectKind",
+    ),
+    (
+        "local adaptive glass modifier",
+        re.compile(r"\bfunc\s+tcGlass\s*\("),
+        "IOSSubstrate View.adaptiveGlass",
+    ),
+    (
+        "local adaptive prominent glass button style modifier",
+        re.compile(r"\bfunc\s+tcProminentGlassButtonStyle\s*\("),
+        "IOSSubstrate View.adaptiveProminentGlassButtonStyle",
+    ),
+    (
+        "local adaptive glass button style modifier",
+        re.compile(r"\bfunc\s+tcGlassButtonStyle\s*\("),
+        "IOSSubstrate View.adaptiveGlassButtonStyle",
+    ),
+    (
+        "local adaptive symbol effect modifier",
+        re.compile(r"\bfunc\s+tcSymbolEffect\s*\("),
+        "IOSSubstrate View.adaptiveSymbolEffect",
+    ),
+    (
+        "local adaptive numeric text transition modifier",
+        re.compile(r"\bfunc\s+tcNumericTextTransition\s*\("),
+        "IOSSubstrate View.adaptiveNumericTextTransition",
+    ),
+    (
+        "local adaptive symbol replace transition modifier",
+        re.compile(r"\bfunc\s+tcSymbolReplace(?:Up)?Transition\s*\("),
+        "IOSSubstrate View adaptive symbol replace transitions",
+    ),
     (
         "local internet date formatter options",
         re.compile(r"\.withInternetDateTime\b"),
@@ -199,8 +235,15 @@ enum ISO8601 {
 struct SubmitError: Identifiable {
     let id = UUID()
 }
+enum TCSymbolEffectKind { case bounce }
 extension View {
     func errorAlert(_ error: Binding<SubmitError?>) -> some View { self }
+    func tcGlass() -> some View { self }
+    func tcProminentGlassButtonStyle() -> some View { self }
+    func tcGlassButtonStyle() -> some View { self }
+    func tcSymbolEffect(_ effect: TCSymbolEffectKind) -> some View { self }
+    func tcNumericTextTransition() -> some View { self }
+    func tcSymbolReplaceTransition() -> some View { self }
 }
 """
     good = """
@@ -216,6 +259,12 @@ struct ConsumerView: View {
             .overlay { ShimmerView().frame(height: 1) }
             .onSubmit { _ = Base64URL.decode("bWFw") }
             .errorAlert(.constant(nil))
+            .adaptiveGlass()
+            .adaptiveProminentGlassButtonStyle()
+            .adaptiveGlassButtonStyle()
+            .adaptiveSymbolEffect(.bounce)
+            .adaptiveNumericTextTransition()
+            .adaptiveSymbolReplaceTransition()
     }
 }
 // UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
