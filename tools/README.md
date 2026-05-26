@@ -257,6 +257,18 @@ iosx lint no-direct-ios-helper Makefile scripts
 iosx lint no-direct-ios-helper --selftest
 ```
 
+## `iosx lint substrate-adoption`
+
+Fails consumer Swift roots that copy substrate-owned primitives instead of
+importing `IOSSubstrate`. The gate currently blocks local `FlowLayout` copies,
+local `PressScaleButtonStyle` copies, and direct UIKit haptic generators. Scope
+it to current app roots; do not point it at this substrate package itself.
+
+```sh
+iosx lint substrate-adoption App Sources
+iosx lint substrate-adoption --selftest
+```
+
 ## `iosx lint no-direct-bundle-config`
 
 Fails direct Swift `Bundle.main` Info.plist reads. Consumers should expose an

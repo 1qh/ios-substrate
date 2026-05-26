@@ -205,6 +205,7 @@ def gates() -> list[Gate]:
         Gate('Swift gate bundle selftest', [str(Path('tools/lint/run-swift-gates')), '--selftest']),
         Gate('no false-green verify selftest', [str(Path('tools/lint/no-false-green-verify')), '--selftest']),
         Gate('no direct iOS helper selftest', [str(Path('tools/lint/no-direct-ios-helper')), '--selftest']),
+        Gate('substrate adoption selftest', [str(Path('tools/lint/substrate-adoption')), '--selftest']),
         Gate(
             'no false-green verify scripts',
             [str(Path('tools/lint/no-false-green-verify')), *shell_files, *make_files],

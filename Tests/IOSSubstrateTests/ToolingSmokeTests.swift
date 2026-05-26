@@ -87,6 +87,7 @@ internal func `iosx command catalog dispatches every advertised command`() throw
         ("lint false-green", ["lint", "false-green", "--selftest"]),
         ("lint no-direct-bundle-config", ["lint", "no-direct-bundle-config", "--selftest"]),
         ("lint no-direct-ios-helper", ["lint", "no-direct-ios-helper", "--selftest"]),
+        ("lint substrate-adoption", ["lint", "substrate-adoption", "--selftest"]),
         ("lint run-all", ["lint", "run-all", "--selftest"]),
         ("lint dead-code", ["lint", "dead-code", "--help"]),
     ]
