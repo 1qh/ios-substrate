@@ -59,3 +59,27 @@ internal func `submit error keeps stable identity and product-owned copy`() {
     #expect(error == SubmitError(title: "Ignored by equality", message: "Network unavailable", id: id))
     #expect(error != SubmitError(title: "Retry", message: "Network unavailable"))
 }
+
+@Test
+internal func `error presentation kind classifies http url and ns errors`() {
+    #expect(ErrorPresentationKind.classify(httpStatus: 400) == .badRequest)
+    #expect(ErrorPresentationKind.classify(httpStatus: 401) == .unauthenticated)
+    #expect(ErrorPresentationKind.classify(httpStatus: 403) == .forbidden)
+    #expect(ErrorPresentationKind.classify(httpStatus: 404) == .notFound)
+    #expect(ErrorPresentationKind.classify(httpStatus: 408) == .networkTimedOut)
+    #expect(ErrorPresentationKind.classify(httpStatus: 409) == .conflict)
+    #expect(ErrorPresentationKind.classify(httpStatus: 429) == .rateLimited)
+    #expect(ErrorPresentationKind.classify(httpStatus: 503) == .serverUnavailable)
+    #expect(ErrorPresentationKind.classify(httpStatus: 418) == .unknown)
+
+    #expect(ErrorPresentationKind.classify(urlError: URLError(.notConnectedToInternet)) == .networkOffline)
+    #expect(ErrorPresentationKind.classify(urlError: URLError(.timedOut)) == .networkTimedOut)
+    #expect(ErrorPresentationKind.classify(urlError: URLError(.cannotFindHost)) == .networkUnreachable)
+    #expect(ErrorPresentationKind.classify(urlError: URLError(.serverCertificateUntrusted)) == .networkSecureConnectionFailed)
+    #expect(ErrorPresentationKind.classify(urlError: URLError(.badURL)) == .invalidRequest)
+    #expect(ErrorPresentationKind.classify(urlError: URLError(.cancelled)) == .cancelled)
+
+    let nsError = NSError(domain: NSURLErrorDomain, code: URLError.notConnectedToInternet.rawValue)
+    #expect(ErrorPresentationKind.classify(nsError: nsError) == .networkOffline)
+    #expect(ErrorPresentationKind.classify(nsError: NSError(domain: "other", code: 1)) == nil)
+}
