@@ -44,6 +44,8 @@ iosx lint dead-code --help
 iosx lint markdown tools/README.md
 iosx lint typos --hidden
 iosx lint checkmake Makefile
+iosx lint shellcheck tools/*.sh
+iosx lint shfmt tools/*.sh
 iosx lint swiftformat --version
 ```
 
@@ -58,7 +60,7 @@ form for agents; `tools/lint/run-all` is the implementation behind it:
 
 - `iosx doctor --fast` public fast-loop contract verification.
 - Swift package tests.
-- shellcheck and shfmt for shell scripts.
+- `iosx lint shellcheck` and `iosx lint shfmt` for shell scripts.
 - SwiftLint strict, SwiftFormat lint, and shared launch-config access checks for Swift roots.
 - false-green shell verification checks for scripts and Makefiles.
 - Python syntax/Ruff checks, editorconfig, `iosx lint typos`, YAML, TOML, JSON,
@@ -125,6 +127,24 @@ public command instead of copying `.checkmake.ini`.
 
 ```sh
 iosx lint checkmake Makefile tools/make/*.mk
+```
+
+## `iosx lint shellcheck`
+
+Runs ShellCheck with substrate strict flags (`-x -S style`). Consumers should
+use this public command instead of hand-picking flags.
+
+```sh
+iosx lint shellcheck tools/**/*.sh
+```
+
+## `iosx lint shfmt`
+
+Runs diff-only shfmt with substrate strict flags (`-d -i 2 -ci -bn`).
+Consumers should use this public lint command for verification loops.
+
+```sh
+iosx lint shfmt tools/**/*.sh
 ```
 
 ## `iosx lint swift-gates`

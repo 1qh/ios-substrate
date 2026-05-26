@@ -220,13 +220,13 @@ def gates() -> list[Gate]:
         Gate('swift package tests', ['swift', 'test']),
         Gate(
             'shellcheck product-neutral scripts',
-            ['shellcheck', '-x', *shell_files],
+            [str(Path('tools/iosx')), 'lint', 'shellcheck', *shell_files],
             applies=has_any(shell_files),
             reason='no shell scripts',
         ),
         Gate(
             'shfmt product-neutral scripts',
-            ['shfmt', '-d', '-i', '2', '-ci', '-bn', *shell_files],
+            [str(Path('tools/iosx')), 'lint', 'shfmt', *shell_files],
             applies=has_any(shell_files),
             reason='no shell scripts',
         ),
