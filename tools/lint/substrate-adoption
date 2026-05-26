@@ -71,6 +71,17 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     ),
 
 
+
+    (
+        "local DisplayString copy",
+        re.compile(r"\benum\s+DisplayString\s*:"),
+        "IOSSubstrate.DisplayString",
+    ),
+    (
+        "local DisplayStringConvertible copy",
+        re.compile(r"\bprotocol\s+DisplayStringConvertible\b"),
+        "IOSSubstrate.DisplayStringConvertible",
+    ),
     (
         "local LoadState state-machine copy",
         re.compile(r"\benum\s+LoadState\s*<"),
@@ -238,6 +249,12 @@ func feedback() {
 enum ISO8601 {
     static func parse(_ raw: String) -> Date? { nil }
 }
+enum DisplayString: Equatable {
+    case userContent(String)
+}
+protocol DisplayStringConvertible {
+    var displayString: DisplayString { get }
+}
 enum LoadState<Value: Sendable> {
     case idle
 }
@@ -274,7 +291,10 @@ struct ConsumerView: View {
             .adaptiveSymbolEffect(.bounce)
             .adaptiveNumericTextTransition()
             .adaptiveSymbolReplaceTransition()
-            .task { _ = LoadState<String, String>.loaded("ready").value }
+            .task {
+                _ = DisplayString.userContent("typed")
+                _ = LoadState<String, String>.loaded("ready").value
+            }
     }
 }
 // UIImpactFeedbackGenerator(style: .heavy).impactOccurred()

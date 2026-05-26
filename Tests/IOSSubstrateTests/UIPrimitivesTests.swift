@@ -32,6 +32,15 @@ internal func `haptic feedback helpers are safe to call in tests`() {
 }
 
 @Test
+internal func `display string separates localized resources from user content`() {
+    let localized = DisplayString.localized("Ready")
+    let userContent = DisplayString.userContent("Merchant typed value")
+
+    #expect(localized == .localized("Ready"))
+    #expect(userContent == .userContent("Merchant typed value"))
+}
+
+@Test
 internal func `load state exposes loaded value only for loaded phase`() {
     let loaded = LoadState<String, String>.loaded("ready")
     let loading = LoadState<String, String>.loading
