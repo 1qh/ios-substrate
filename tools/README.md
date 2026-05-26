@@ -260,10 +260,11 @@ iosx lint no-direct-ios-helper --selftest
 ## `iosx lint substrate-adoption`
 
 Fails consumer Swift roots that copy substrate-owned primitives instead of
-importing `IOSSubstrate`. The gate currently blocks local `FlowLayout` copies,
-local `PressScaleButtonStyle` copies, direct UIKit haptic generators, direct
-LocalAuthentication policy evaluation, and local internet date-time codecs.
-Scope it to current app roots; do not point it at this substrate package itself.
+importing `IOSSubstrate`. The gate currently blocks local `FlowLayout`,
+`PressScaleButtonStyle`, `ShimmerView`, `Base64URL`, and internet date-time
+codec copies, plus direct UIKit haptic generators and direct LocalAuthentication
+policy evaluation. Scope it to current app roots; do not point it at this
+substrate package itself.
 
 ```sh
 iosx lint substrate-adoption App Sources

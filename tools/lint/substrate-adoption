@@ -25,6 +25,11 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         "IOSSubstrate PressScaleButtonStyle or .pressScale()",
     ),
     (
+        "local ShimmerView copy",
+        re.compile(r"\bstruct\s+ShimmerView\s*:\s*View\b"),
+        "IOSSubstrate.ShimmerView",
+    ),
+    (
         "raw impact haptic generator",
         re.compile(r"\bUIImpactFeedbackGenerator\s*\("),
         "IOSSubstrate.HapticFeedback",
@@ -48,6 +53,11 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         "direct biometric evaluation policy",
         re.compile(r"\.evaluatePolicy\s*\("),
         "IOSSubstrate.BiometricAuthentication",
+    ),
+    (
+        "local base64url codec wrapper",
+        re.compile(r"\b(?:enum|struct|class)\s+Base64URL\b"),
+        "IOSSubstrate.Base64URL",
     ),
     (
         "local internet date codec wrapper",
@@ -150,6 +160,12 @@ struct FlowLayout: Layout {}
 struct PressScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View { configuration.label }
 }
+struct ShimmerView: View {
+    var body: some View { Text("loading") }
+}
+enum Base64URL {
+    static func decode(_ raw: String) -> Data? { nil }
+}
 func feedback() {
     UIImpactFeedbackGenerator(style: .light).impactOccurred()
     UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -173,6 +189,8 @@ struct ConsumerView: View {
             .pressScale()
             .onAppear { HapticFeedback.light() }
             .task { _ = ISO8601DateCodec.parseInternetDateTime("2026-05-26T05:30:12Z") }
+            .overlay { ShimmerView().frame(height: 1) }
+            .onSubmit { _ = Base64URL.decode("bWFw") }
     }
 }
 // UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
