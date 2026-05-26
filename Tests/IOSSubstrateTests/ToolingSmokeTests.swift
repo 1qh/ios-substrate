@@ -62,7 +62,25 @@ internal func `iosx command catalog stays self consistent`() throws {
 
 @Test
 internal func `iosx command catalog dispatches every advertised command`() throws {
-    let expectedSmokeArguments: [(String, [String])] = [
+    let expectedSmokeArguments = iosxCommandSmokeArguments()
+    let expectedNames = expectedSmokeArguments.map(\.0)
+    let smokeArgumentsByName = Dictionary(uniqueKeysWithValues: expectedSmokeArguments)
+    let commands = try iosxCommandCatalog()
+
+    #expect(commands.map(\.name) == expectedNames)
+
+    for command in commands {
+        guard let arguments = smokeArgumentsByName[command.name] else {
+            throw ToolingSmokeError.uncoveredCommand(command.name)
+        }
+
+        let output = try runIOSX(arguments)
+        #expect(!output.standardOutput.isEmpty)
+    }
+}
+
+private func iosxCommandSmokeArguments() -> [(String, [String])] {
+    [
         ("doctor", ["doctor", "--fast", "--json"]),
         ("version", ["version", "--json"]),
         ("commands", ["commands", "--json"]),
@@ -86,25 +104,12 @@ internal func `iosx command catalog dispatches every advertised command`() throw
         ("fmt taplo", ["fmt", "taplo", "--version"]),
         ("lint false-green", ["lint", "false-green", "--selftest"]),
         ("lint no-direct-bundle-config", ["lint", "no-direct-bundle-config", "--selftest"]),
+        ("lint no-raw-localized-description", ["lint", "no-raw-localized-description", "--selftest"]),
         ("lint no-direct-ios-helper", ["lint", "no-direct-ios-helper", "--selftest"]),
         ("lint substrate-adoption", ["lint", "substrate-adoption", "--selftest"]),
         ("lint run-all", ["lint", "run-all", "--selftest"]),
         ("lint dead-code", ["lint", "dead-code", "--help"]),
     ]
-    let expectedNames = expectedSmokeArguments.map(\.0)
-    let smokeArgumentsByName = Dictionary(uniqueKeysWithValues: expectedSmokeArguments)
-    let commands = try iosxCommandCatalog()
-
-    #expect(commands.map(\.name) == expectedNames)
-
-    for command in commands {
-        guard let arguments = smokeArgumentsByName[command.name] else {
-            throw ToolingSmokeError.uncoveredCommand(command.name)
-        }
-
-        let output = try runIOSX(arguments)
-        #expect(!output.standardOutput.isEmpty)
-    }
 }
 
 @Test

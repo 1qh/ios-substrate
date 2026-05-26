@@ -95,6 +95,7 @@ fmt shfmt	iosx fmt shfmt <shfmt path args...>	format shell scripts with substrat
 fmt taplo	iosx fmt taplo <taplo path args...>	format TOML files with Taplo
 lint false-green	iosx lint false-green <path>...	reject verification scripts that can hide pipeline failures
 lint no-direct-bundle-config	iosx lint no-direct-bundle-config <swift-root>...	reject direct Bundle.main Info.plist reads in Swift code
+lint no-raw-localized-description	iosx lint no-raw-localized-description <swift-root>...	reject raw Error.localizedDescription usage in Swift code
 lint no-direct-ios-helper	iosx lint no-direct-ios-helper <path>...	reject copied generic iOS helper logic in consumer repos
 lint substrate-adoption	iosx lint substrate-adoption <swift-root>...	reject copied substrate-owned Swift primitives in consumer repos
 lint run-all	iosx lint run-all [selector args...]	run the substrate fast gate suite
@@ -110,6 +111,7 @@ tools/ios-xcode
 tools/lint/run-swift-gates
 tools/lint/no-false-green-verify
 tools/lint/no-direct-bundle-config
+tools/lint/no-raw-localized-description
 tools/lint/no-direct-ios-helper
 tools/lint/substrate-adoption
 tools/lint/run-all
@@ -492,6 +494,10 @@ case "${1:-}" in
       no-direct-bundle-config)
         shift
         exec_tool "$ROOT/tools/lint/no-direct-bundle-config" "$@"
+        ;;
+      no-raw-localized-description)
+        shift
+        exec_tool "$ROOT/tools/lint/no-raw-localized-description" "$@"
         ;;
       no-direct-ios-helper)
         shift

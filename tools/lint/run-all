@@ -203,6 +203,10 @@ def gates() -> list[Gate]:
         Gate('iosx doctor fast contract', [str(Path('tools/iosx')), 'doctor', '--fast']),
         Gate('no direct Bundle config selftest', [str(Path('tools/lint/no-direct-bundle-config')), '--selftest']),
         Gate('Swift gate bundle selftest', [str(Path('tools/lint/run-swift-gates')), '--selftest']),
+        Gate(
+            'no raw localizedDescription selftest',
+            [str(Path('tools/lint/no-raw-localized-description')), '--selftest'],
+        ),
         Gate('no false-green verify selftest', [str(Path('tools/lint/no-false-green-verify')), '--selftest']),
         Gate('no direct iOS helper selftest', [str(Path('tools/lint/no-direct-ios-helper')), '--selftest']),
         Gate('substrate adoption selftest', [str(Path('tools/lint/substrate-adoption')), '--selftest']),

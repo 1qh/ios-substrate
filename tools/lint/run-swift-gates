@@ -22,6 +22,7 @@ Runs the reusable Swift gate bundle:
 - SwiftLint strict with the selected config.
 - SwiftFormat --lint with the selected config.
 - no-direct-bundle-config on the same Swift roots.
+- no-raw-localized-description on the same Swift roots.
 EOF
 }
 
@@ -57,6 +58,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --selftest)
       [ -x "$ROOT/tools/lint/no-direct-bundle-config" ] || fail "missing no-direct-bundle-config"
+      [ -x "$ROOT/tools/lint/no-raw-localized-description" ] || fail "missing no-raw-localized-description"
       [ -f "$SWIFTLINT_CONFIG" ] || fail "missing default SwiftLint config"
       [ -f "$SWIFTFORMAT_CONFIG" ] || fail "missing default SwiftFormat config"
       printf 'ok\n'
@@ -108,6 +110,7 @@ done
 [ -f "$SWIFTFORMAT_CONFIG" ] || fail "SwiftFormat config not found: $SWIFTFORMAT_CONFIG"
 [ -z "$SWIFTLINT_OVERLAY" ] || [ -f "$SWIFTLINT_OVERLAY" ] || fail "SwiftLint overlay not found: $SWIFTLINT_OVERLAY"
 [ -x "$ROOT/tools/lint/no-direct-bundle-config" ] || fail "missing no-direct-bundle-config"
+[ -x "$ROOT/tools/lint/no-raw-localized-description" ] || fail "missing no-raw-localized-description"
 command -v swiftlint >/dev/null 2>&1 || fail "missing required tool: swiftlint"
 command -v swiftformat >/dev/null 2>&1 || fail "missing required tool: swiftformat"
 
@@ -122,3 +125,4 @@ fi
 swiftlint lint --strict --config "$SWIFTLINT_CONFIG" "${ROOTS[@]}"
 swiftformat --lint --config "$SWIFTFORMAT_CONFIG" "${ROOTS[@]}"
 "$ROOT/tools/lint/no-direct-bundle-config" "${ROOTS[@]}"
+"$ROOT/tools/lint/no-raw-localized-description" "${ROOTS[@]}"

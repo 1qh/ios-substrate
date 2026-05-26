@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+"""Reject raw Error.localizedDescription usage in Swift code.
+
+Localized system descriptions are implementation detail strings. Product apps
+should classify errors through an app-owned user-facing copy gate before rendering
+or analytics, and use structured values for logs.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import pathlib
+import re
+import sys
+import tempfile
+
+ALLOW = re.compile(r"localized-description-allow:")
+PATTERN = re.compile(r"\.localizedDescription\b")
+SKIP_DIRS = {".git", ".build", ".swiftpm", "build", "DerivedData", "node_modules", "Pods"}
+SWIFT_EXTENSION = ".swift"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Detect raw localizedDescription usage in Swift code.")
+    parser.add_argument("paths", nargs="*", default=["."], help="Swift files or directories to scan")
+    parser.add_argument("--selftest", action="store_true")
+    return parser.parse_args()
+
+
+def swift_files(path: pathlib.Path) -> list[pathlib.Path]:
+    if path.is_file():
+        return [path] if path.suffix == SWIFT_EXTENSION else []
+    if not path.is_dir():
+        return []
+    files: list[pathlib.Path] = []
+    for root, dirs, names in os.walk(path):
+        dirs[:] = [directory for directory in dirs if directory not in SKIP_DIRS and not directory.startswith(".")]
+        root_path = pathlib.Path(root)
+        for name in names:
+            candidate = root_path / name
+            if candidate.suffix == SWIFT_EXTENSION:
+                files.append(candidate)
+    return files
+
+
+def active_code_line(line: str, in_block_comment: bool) -> tuple[str, bool]:
+    result: list[str] = []
+    index = 0
+    while index < len(line):
+        if in_block_comment:
+            end = line.find("*/", index)
+            if end == -1:
+                return "".join(result), True
+            index = end + 2
+            in_block_comment = False
+            continue
+        block_start = line.find("/*", index)
+        line_comment = line.find("//", index)
+        if line_comment != -1 and (block_start == -1 or line_comment < block_start):
+            result.append(line[index:line_comment])
+            return "".join(result), False
+        if block_start == -1:
+            result.append(line[index:])
+            return "".join(result), False
+        result.append(line[index:block_start])
+        index = block_start + 2
+        in_block_comment = True
+    return "".join(result), in_block_comment
+
+
+def scan_text(text: str) -> list[int]:
+    findings: list[int] = []
+    in_block_comment = False
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if ALLOW.search(line):
+            continue
+        code, in_block_comment = active_code_line(line, in_block_comment)
+        if PATTERN.search(code):
+            findings.append(line_number)
+    return findings
+
+
+def scan_paths(paths: list[str]) -> list[str]:
+    files: list[pathlib.Path] = []
+    for raw_path in paths:
+        files.extend(swift_files(pathlib.Path(raw_path)))
+    findings: list[str] = []
+    for file in sorted(set(files)):
+        try:
+            text = file.read_text(errors="ignore")
+        except OSError:
+            continue
+        for line_number in scan_text(text):
+            findings.append(
+                f"{file}:{line_number}: "
+                "raw localizedDescription; use an app-owned user-facing error copy gate",
+            )
+    return findings
+
+
+def selftest() -> None:
+    bad = """
+func render(_ error: Error) -> String {
+    error.localizedDescription
+}
+"""
+    good = """
+func render(_ error: Error) -> String {
+    UserFacingError.message(for: error)
+}
+// error.localizedDescription is documentation only
+/*
+let x = error.localizedDescription
+*/
+let y = error.localizedDescription // localized-description-allow: inspected third-party passthrough
+"""
+    checks = [scan_text(bad) == [3], scan_text(good) == []]
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        (root / "Bad.swift").write_text(bad)
+        (root / "Good.swift").write_text(good)
+        checks.append(len(scan_paths([str(root)])) == 1)
+    if not all(checks):
+        print("FAIL: no-raw-localized-description selftest failed", file=sys.stderr)
+        sys.exit(1)
+    print("ok")
+
+
+def main() -> None:
+    args = parse_args()
+    if args.selftest:
+        selftest()
+        return
+    findings = scan_paths(args.paths)
+    if findings:
+        print("\n".join(findings), file=sys.stderr)
+        print("FAIL: raw localizedDescription must not bypass typed user-facing error copy", file=sys.stderr)
+        sys.exit(1)
+    print("ok")
+
+
+if __name__ == "__main__":
+    main()
