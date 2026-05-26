@@ -89,8 +89,10 @@ lint shfmt	iosx lint shfmt <shfmt path args...>	run shfmt diff check with substr
 lint editorconfig	iosx lint editorconfig [editorconfig-checker args...]	run EditorConfig Checker with the substrate strict config by default
 lint yamllint	iosx lint yamllint [yamllint path/config args...]	run Yamllint strictly with the substrate strict config by default
 lint taplo	iosx lint taplo <taplo path args...>	run Taplo TOML lint with stable non-color output
+lint taplo-format	iosx lint taplo-format <taplo path args...>	run Taplo TOML format check
 lint lychee	iosx lint lychee <markdown path args...>	run Lychee in offline no-progress mode
 fmt shfmt	iosx fmt shfmt <shfmt path args...>	format shell scripts with substrate strict flags
+fmt taplo	iosx fmt taplo <taplo path args...>	format TOML files with Taplo
 lint false-green	iosx lint false-green <path>...	reject verification scripts that can hide pipeline failures
 lint no-direct-bundle-config	iosx lint no-direct-bundle-config <swift-root>...	reject direct Bundle.main Info.plist reads in Swift code
 lint no-direct-ios-helper	iosx lint no-direct-ios-helper <path>...	reject copied generic iOS helper logic in consumer repos
@@ -360,6 +362,14 @@ case "${1:-}" in
         fi
         exec shfmt -w -i 2 -ci -bn "$@"
         ;;
+      taplo)
+        shift
+        command -v taplo >/dev/null 2>&1 || fail 'missing required tool: taplo'
+        if [ "${1:-}" = "--version" ]; then
+          exec taplo --version
+        fi
+        exec taplo format "$@"
+        ;;
       *)
         usage >&2
         exit 2
@@ -456,6 +466,14 @@ case "${1:-}" in
           exec taplo --version
         fi
         exec taplo lint --colors never "$@"
+        ;;
+      taplo-format)
+        shift
+        command -v taplo >/dev/null 2>&1 || fail 'missing required tool: taplo'
+        if [ "${1:-}" = "--version" ]; then
+          exec taplo --version
+        fi
+        exec taplo format --check "$@"
         ;;
       lychee)
         shift

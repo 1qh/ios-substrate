@@ -49,8 +49,10 @@ iosx lint shfmt tools/*.sh
 iosx lint editorconfig
 iosx lint yamllint .github/workflows/*.yml
 iosx lint taplo Package.swift
+iosx lint taplo-format Package.swift
 iosx lint lychee README.md
 iosx fmt shfmt tools/*.sh
+iosx fmt taplo Package.swift
 iosx lint swiftformat --version
 ```
 
@@ -69,8 +71,9 @@ form for agents; `tools/lint/run-all` is the implementation behind it:
 - SwiftLint strict, SwiftFormat lint, and shared launch-config access checks for Swift roots.
 - false-green shell verification checks for scripts and Makefiles.
 - Python syntax/Ruff checks, `iosx lint editorconfig`, `iosx lint typos`,
-  `iosx lint yamllint`, `iosx lint taplo`, JSON, `iosx lint markdown`,
-  `iosx lint checkmake`, and `iosx lint lychee` offline markdown link checks.
+  `iosx lint yamllint`, `iosx lint taplo`, `iosx lint taplo-format`, JSON,
+  `iosx lint markdown`, `iosx lint checkmake`, and `iosx lint lychee` offline
+  markdown link checks.
 - product-neutrality scan for terms that belong in consumer apps.
 
 Selectors are available for fast local iteration:
@@ -182,6 +185,14 @@ Runs Taplo TOML lint with stable non-color output.
 iosx lint taplo Package.swift ./**/*.toml
 ```
 
+## `iosx lint taplo-format`
+
+Runs Taplo TOML format checking without modifying files.
+
+```sh
+iosx lint taplo-format Package.swift ./**/*.toml
+```
+
 ## `iosx lint lychee`
 
 Runs Lychee with offline, no-progress output for deterministic documentation
@@ -198,6 +209,14 @@ uses for diff-only verification.
 
 ```sh
 iosx fmt shfmt tools/**/*.sh
+```
+
+## `iosx fmt taplo`
+
+Formats TOML files with Taplo.
+
+```sh
+iosx fmt taplo Package.swift ./**/*.toml
 ```
 
 ## `iosx lint swift-gates`
