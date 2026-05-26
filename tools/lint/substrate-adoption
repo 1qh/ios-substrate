@@ -49,6 +49,16 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         re.compile(r"\.evaluatePolicy\s*\("),
         "IOSSubstrate.BiometricAuthentication",
     ),
+    (
+        "local internet date codec wrapper",
+        re.compile(r"\b(?:enum|struct|class)\s+(?:ISO8601|ISO8601DateCodec)\b"),
+        "IOSSubstrate.ISO8601DateCodec",
+    ),
+    (
+        "local internet date formatter options",
+        re.compile(r"\.withInternetDateTime\b"),
+        "IOSSubstrate.ISO8601DateCodec",
+    ),
 ]
 
 
@@ -146,6 +156,11 @@ func feedback() {
     UISelectionFeedbackGenerator().selectionChanged()
     if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) {}
     try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Unlock")
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+}
+enum ISO8601 {
+    static func parse(_ raw: String) -> Date? { nil }
 }
 """
     good = """
@@ -157,6 +172,7 @@ struct ConsumerView: View {
         FlowLayout { Text("A") }
             .pressScale()
             .onAppear { HapticFeedback.light() }
+            .task { _ = ISO8601DateCodec.parseInternetDateTime("2026-05-26T05:30:12Z") }
     }
 }
 // UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
