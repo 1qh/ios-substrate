@@ -10,6 +10,12 @@ public enum BiometricAuthentication {
         currentContext = nil
     }
 
+    nonisolated public static func nonInteractiveContext() -> LAContext {
+        let context = LAContext()
+        context.interactionNotAllowed = true
+        return context
+    }
+
     public static func canEvaluateBiometrics() -> Bool {
         let context = LAContext()
         var error: NSError?

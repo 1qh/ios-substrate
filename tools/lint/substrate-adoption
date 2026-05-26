@@ -45,6 +45,11 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         "IOSSubstrate.HapticFeedback",
     ),
     (
+        "direct LocalAuthentication context construction",
+        re.compile(r"\bLAContext\s*\("),
+        "IOSSubstrate.BiometricAuthentication",
+    ),
+    (
         "direct biometric capability policy",
         re.compile(r"\.canEvaluatePolicy\s*\("),
         "IOSSubstrate.BiometricAuthentication",
@@ -154,6 +159,7 @@ def scan_paths(paths: list[str]) -> list[str]:
 def selftest() -> None:
     bad = """
 import SwiftUI
+import LocalAuthentication
 import UIKit
 
 struct FlowLayout: Layout {}
@@ -167,6 +173,7 @@ enum Base64URL {
     static func decode(_ raw: String) -> Data? { nil }
 }
 func feedback() {
+    let context = LAContext()
     UIImpactFeedbackGenerator(style: .light).impactOccurred()
     UINotificationFeedbackGenerator().notificationOccurred(.success)
     UISelectionFeedbackGenerator().selectionChanged()

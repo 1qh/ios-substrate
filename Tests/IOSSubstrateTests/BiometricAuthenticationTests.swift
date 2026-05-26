@@ -15,3 +15,10 @@ internal func `biometric current context starts empty and can be discarded`() {
 internal func `biometric capability probe is safe in simulator environments`() {
     _ = BiometricAuthentication.canEvaluateBiometrics()
 }
+
+@Test
+internal func `non interactive biometric context disables UI prompts`() {
+    let context = BiometricAuthentication.nonInteractiveContext()
+
+    #expect(context.interactionNotAllowed == true)
+}
