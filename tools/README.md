@@ -46,6 +46,11 @@ iosx lint typos --hidden
 iosx lint checkmake Makefile
 iosx lint shellcheck tools/*.sh
 iosx lint shfmt tools/*.sh
+iosx lint editorconfig
+iosx lint yamllint .github/workflows/*.yml
+iosx lint taplo Package.swift
+iosx lint lychee README.md
+iosx fmt shfmt tools/*.sh
 iosx lint swiftformat --version
 ```
 
@@ -63,8 +68,9 @@ form for agents; `tools/lint/run-all` is the implementation behind it:
 - `iosx lint shellcheck` and `iosx lint shfmt` for shell scripts.
 - SwiftLint strict, SwiftFormat lint, and shared launch-config access checks for Swift roots.
 - false-green shell verification checks for scripts and Makefiles.
-- Python syntax/Ruff checks, editorconfig, `iosx lint typos`, YAML, TOML, JSON,
-  `iosx lint markdown`, `iosx lint checkmake`, and offline markdown link checks.
+- Python syntax/Ruff checks, `iosx lint editorconfig`, `iosx lint typos`,
+  `iosx lint yamllint`, `iosx lint taplo`, JSON, `iosx lint markdown`,
+  `iosx lint checkmake`, and `iosx lint lychee` offline markdown link checks.
 - product-neutrality scan for terms that belong in consumer apps.
 
 Selectors are available for fast local iteration:
@@ -145,6 +151,53 @@ Consumers should use this public lint command for verification loops.
 
 ```sh
 iosx lint shfmt tools/**/*.sh
+```
+
+## `iosx lint editorconfig`
+
+Runs EditorConfig Checker with the substrate strict config by default. Consumers
+that have legitimate product-generated-file exclusions may pass their own
+checker config explicitly while still using the same public command.
+
+```sh
+iosx lint editorconfig
+iosx lint editorconfig -config .editorconfig-checker.json
+```
+
+## `iosx lint yamllint`
+
+Runs Yamllint in strict mode with the substrate strict config by default. Product
+repos may pass a product-owned config when local YAML overlays are required.
+
+```sh
+iosx lint yamllint .github/workflows/*.yml
+iosx lint yamllint -c .yamllint.yml .
+```
+
+## `iosx lint taplo`
+
+Runs Taplo TOML lint with stable non-color output.
+
+```sh
+iosx lint taplo Package.swift ./**/*.toml
+```
+
+## `iosx lint lychee`
+
+Runs Lychee with offline, no-progress output for deterministic documentation
+link checks.
+
+```sh
+iosx lint lychee README.md docs/**/*.md
+```
+
+## `iosx fmt shfmt`
+
+Formats shell scripts with the same substrate strict flags that `iosx lint shfmt`
+uses for diff-only verification.
+
+```sh
+iosx fmt shfmt tools/**/*.sh
 ```
 
 ## `iosx lint swift-gates`

@@ -86,6 +86,11 @@ lint typos	iosx lint typos <typos args...>	run Typos with the substrate dictiona
 lint checkmake	iosx lint checkmake <checkmake args...>	run Checkmake with the substrate strict config
 lint shellcheck	iosx lint shellcheck <shellcheck path args...>	run ShellCheck with substrate strict flags
 lint shfmt	iosx lint shfmt <shfmt path args...>	run shfmt diff check with substrate strict flags
+lint editorconfig	iosx lint editorconfig [editorconfig-checker args...]	run EditorConfig Checker with the substrate strict config by default
+lint yamllint	iosx lint yamllint [yamllint path/config args...]	run Yamllint strictly with the substrate strict config by default
+lint taplo	iosx lint taplo <taplo path args...>	run Taplo TOML lint with stable non-color output
+lint lychee	iosx lint lychee <markdown path args...>	run Lychee in offline no-progress mode
+fmt shfmt	iosx fmt shfmt <shfmt path args...>	format shell scripts with substrate strict flags
 lint false-green	iosx lint false-green <path>...	reject verification scripts that can hide pipeline failures
 lint no-direct-bundle-config	iosx lint no-direct-bundle-config <swift-root>...	reject direct Bundle.main Info.plist reads in Swift code
 lint no-direct-ios-helper	iosx lint no-direct-ios-helper <path>...	reject copied generic iOS helper logic in consumer repos
@@ -344,6 +349,23 @@ case "${1:-}" in
     shift
     path_value "$@"
     ;;
+  fmt)
+    shift
+    case "${1:-}" in
+      shfmt)
+        shift
+        command -v shfmt >/dev/null 2>&1 || fail 'missing required tool: shfmt'
+        if [ "${1:-}" = "--version" ]; then
+          exec shfmt --version
+        fi
+        exec shfmt -w -i 2 -ci -bn "$@"
+        ;;
+      *)
+        usage >&2
+        exit 2
+        ;;
+    esac
+    ;;
   lint)
     shift
     case "${1:-}" in
@@ -386,6 +408,62 @@ case "${1:-}" in
           exec shfmt --version
         fi
         exec shfmt -d -i 2 -ci -bn "$@"
+        ;;
+      editorconfig)
+        shift
+        command -v editorconfig-checker >/dev/null 2>&1 || fail 'missing required tool: editorconfig-checker'
+        if [ "${1:-}" = "--version" ]; then
+          exec editorconfig-checker --version
+        fi
+        has_editorconfig_config=false
+        editorconfig_arg=
+        for editorconfig_arg in "$@"; do
+          case "$editorconfig_arg" in
+            -config | --config | -config=* | --config=*)
+              has_editorconfig_config=true
+              ;;
+          esac
+        done
+        if [ "$has_editorconfig_config" = true ]; then
+          exec editorconfig-checker "$@"
+        fi
+        exec editorconfig-checker -config "$ROOT/templates/strict-editorconfig-checker.json" "$@"
+        ;;
+      yamllint)
+        shift
+        command -v yamllint >/dev/null 2>&1 || fail 'missing required tool: yamllint'
+        if [ "${1:-}" = "--version" ]; then
+          exec yamllint --version
+        fi
+        has_yamllint_config=false
+        yamllint_arg=
+        for yamllint_arg in "$@"; do
+          case "$yamllint_arg" in
+            -c | --config-file | -c=* | --config-file=*)
+              has_yamllint_config=true
+              ;;
+          esac
+        done
+        if [ "$has_yamllint_config" = true ]; then
+          exec yamllint -s "$@"
+        fi
+        exec yamllint -s -c "$ROOT/templates/strict-yamllint.yml" "$@"
+        ;;
+      taplo)
+        shift
+        command -v taplo >/dev/null 2>&1 || fail 'missing required tool: taplo'
+        if [ "${1:-}" = "--version" ]; then
+          exec taplo --version
+        fi
+        exec taplo lint --colors never "$@"
+        ;;
+      lychee)
+        shift
+        command -v lychee >/dev/null 2>&1 || fail 'missing required tool: lychee'
+        if [ "${1:-}" = "--version" ]; then
+          exec lychee --version
+        fi
+        exec lychee --no-progress --offline "$@"
         ;;
       false-green)
         shift

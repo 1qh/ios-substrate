@@ -248,7 +248,7 @@ def gates() -> list[Gate]:
             applies=has_any(python_files),
             reason='no Python scripts',
         ),
-        Gate('editorconfig checker', ['editorconfig-checker', '-config', 'templates/strict-editorconfig-checker.json']),
+        Gate('editorconfig checker', [str(Path('tools/iosx')), 'lint', 'editorconfig']),
         Gate(
             'typos repository scan',
             [
@@ -266,13 +266,13 @@ def gates() -> list[Gate]:
         ),
         Gate(
             'yamllint strict YAML',
-            ['yamllint', '-s', '-c', 'templates/strict-yamllint.yml', *yaml_files],
+            [str(Path('tools/iosx')), 'lint', 'yamllint', *yaml_files],
             applies=has_any(yaml_files),
             reason='no YAML files',
         ),
         Gate(
             'taplo TOML lint',
-            ['taplo', 'lint', '--colors', 'never', *toml_files],
+            [str(Path('tools/iosx')), 'lint', 'taplo', *toml_files],
             applies=has_any(toml_files),
             reason='no TOML files',
         ),
@@ -304,7 +304,7 @@ def gates() -> list[Gate]:
         ),
         Gate(
             'lychee offline docs links',
-            ['lychee', '--no-progress', '--offline', *markdown_files],
+            [str(Path('tools/iosx')), 'lint', 'lychee', *markdown_files],
             applies=has_any(markdown_files),
             reason='no markdown files',
         ),
