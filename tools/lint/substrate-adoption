@@ -70,6 +70,12 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         "IOSSubstrate.ISO8601DateCodec",
     ),
 
+
+    (
+        "local LoadState state-machine copy",
+        re.compile(r"\benum\s+LoadState\s*<"),
+        "IOSSubstrate.LoadState",
+    ),
     (
         "local SubmitError copy",
         re.compile(r"\b(?:struct|enum|class)\s+SubmitError\b"),
@@ -232,6 +238,9 @@ func feedback() {
 enum ISO8601 {
     static func parse(_ raw: String) -> Date? { nil }
 }
+enum LoadState<Value: Sendable> {
+    case idle
+}
 struct SubmitError: Identifiable {
     let id = UUID()
 }
@@ -265,6 +274,7 @@ struct ConsumerView: View {
             .adaptiveSymbolEffect(.bounce)
             .adaptiveNumericTextTransition()
             .adaptiveSymbolReplaceTransition()
+            .task { _ = LoadState<String, String>.loaded("ready").value }
     }
 }
 // UIImpactFeedbackGenerator(style: .heavy).impactOccurred()

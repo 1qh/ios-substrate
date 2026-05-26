@@ -32,6 +32,15 @@ internal func `haptic feedback helpers are safe to call in tests`() {
 }
 
 @Test
+internal func `load state exposes loaded value only for loaded phase`() {
+    let loaded = LoadState<String, String>.loaded("ready")
+    let loading = LoadState<String, String>.loading
+
+    #expect(loaded.value == "ready")
+    #expect(loading.value == nil)
+}
+
+@Test
 internal func `submit error keeps stable identity and product-owned copy`() {
     let id = UUID()
     let error = SubmitError(title: "Retry", message: "Network unavailable", id: id)
