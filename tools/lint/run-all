@@ -165,7 +165,7 @@ def selftest() -> None:
         failed.append(('real', 1, 'real gate', True))
     gate_commands = {gate.label: gate.command for gate in gates()}
     typos_command = gate_commands.get('typos repository scan', [])
-    if '--config' not in typos_command or '_typos.toml' not in typos_command:
+    if typos_command[:3] != [str(Path('tools/iosx')), 'lint', 'typos']:
         failed.append(('typos-config', 0, 'typos repository scan', True))
     if failed:
         print('FAIL: run-all selftest failed', file=sys.stderr)
@@ -252,9 +252,9 @@ def gates() -> list[Gate]:
         Gate(
             'typos repository scan',
             [
+                str(Path('tools/iosx')),
+                'lint',
                 'typos',
-                '--config',
-                '_typos.toml',
                 '--hidden',
                 '--exclude',
                 '.git',

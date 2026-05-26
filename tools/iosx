@@ -82,6 +82,7 @@ xcode	iosx xcode <subcommand> [args...]	create generic Xcode helper artifacts
 lint swift-gates	iosx lint swift-gates [--swiftlint-overlay .swiftlint.yml] <swift-root>...	run the strict reusable Swift lint bundle
 lint swiftformat	iosx lint swiftformat <swiftformat args...>	run SwiftFormat with the substrate strict config
 lint markdown	iosx lint markdown <markdownlint-cli2 args...>	run Markdownlint with the substrate strict config
+lint typos	iosx lint typos <typos args...>	run Typos with the substrate dictionary
 lint false-green	iosx lint false-green <path>...	reject verification scripts that can hide pipeline failures
 lint no-direct-bundle-config	iosx lint no-direct-bundle-config <swift-root>...	reject direct Bundle.main Info.plist reads in Swift code
 lint no-direct-ios-helper	iosx lint no-direct-ios-helper <path>...	reject copied generic iOS helper logic in consumer repos
@@ -356,6 +357,11 @@ case "${1:-}" in
         shift
         command -v markdownlint-cli2 >/dev/null 2>&1 || fail 'missing required tool: markdownlint-cli2'
         exec markdownlint-cli2 --config "$ROOT/templates/strict-markdownlint.json" "$@"
+        ;;
+      typos)
+        shift
+        command -v typos >/dev/null 2>&1 || fail 'missing required tool: typos'
+        exec typos --config "$ROOT/_typos.toml" --exclude .git --exclude .build --exclude .swiftpm "$@"
         ;;
       false-green)
         shift
