@@ -284,7 +284,7 @@ def gates() -> list[Gate]:
         ),
         Gate(
             'checkmake Makefiles',
-            ['checkmake', '--config=templates/strict-checkmake.ini', *make_files],
+            [str(Path('tools/iosx')), 'lint', 'checkmake', *make_files],
             applies=has_any(make_files),
             reason='no Makefiles',
         ),

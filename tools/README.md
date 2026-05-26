@@ -43,6 +43,7 @@ iosx lint run-all --selftest
 iosx lint dead-code --help
 iosx lint markdown tools/README.md
 iosx lint typos --hidden
+iosx lint checkmake Makefile
 iosx lint swiftformat --version
 ```
 
@@ -61,7 +62,7 @@ form for agents; `tools/lint/run-all` is the implementation behind it:
 - SwiftLint strict, SwiftFormat lint, and shared launch-config access checks for Swift roots.
 - false-green shell verification checks for scripts and Makefiles.
 - Python syntax/Ruff checks, editorconfig, `iosx lint typos`, YAML, TOML, JSON,
-  `iosx lint markdown`, and offline markdown link checks.
+  `iosx lint markdown`, `iosx lint checkmake`, and offline markdown link checks.
 - product-neutrality scan for terms that belong in consumer apps.
 
 Selectors are available for fast local iteration:
@@ -115,6 +116,15 @@ the command.
 
 ```sh
 iosx lint typos --hidden
+```
+
+## `iosx lint checkmake`
+
+Runs Checkmake with the substrate strict config. Consumers should use this
+public command instead of copying `.checkmake.ini`.
+
+```sh
+iosx lint checkmake Makefile tools/make/*.mk
 ```
 
 ## `iosx lint swift-gates`
