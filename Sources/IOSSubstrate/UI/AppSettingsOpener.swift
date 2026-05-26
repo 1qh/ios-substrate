@@ -6,7 +6,7 @@ public import UIKit
 ///
 /// Product apps own the surrounding copy and permission policy. Substrate owns
 /// the easy-to-drift `UIApplication.openSettingsURLString` construction and
-/// UIApplication handoff.
+/// delegates the UIKit handoff to `ExternalURLOpener`.
 public enum AppSettingsOpener {
     #if canImport(UIKit)
     public static var settingsURL: URL? {
@@ -21,9 +21,7 @@ public enum AppSettingsOpener {
             return
         }
 
-        UIApplication.shared.open(url, options: [:]) { success in
-            completion?(success)
-        }
+        ExternalURLOpener.open(url, completion: completion)
     }
     #endif
 }

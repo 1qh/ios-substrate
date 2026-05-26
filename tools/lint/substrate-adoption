@@ -138,6 +138,11 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         re.compile(r"\.withInternetDateTime\b"),
         "IOSSubstrate.ISO8601DateCodec",
     ),
+    (
+        "direct UIApplication URL open",
+        re.compile(r"\bUIApplication\.shared\.open\s*\("),
+        "IOSSubstrate.ExternalURLOpener",
+    ),
 ]
 
 
@@ -243,6 +248,7 @@ func feedback() {
     UISelectionFeedbackGenerator().selectionChanged()
     if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) {}
     try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Unlock")
+    UIApplication.shared.open(URL(string: "https://example.test")!)
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 }
@@ -294,6 +300,7 @@ struct ConsumerView: View {
             .task {
                 _ = DisplayString.userContent("typed")
                 _ = LoadState<String, String>.loaded("ready").value
+                ExternalURLOpener.open(URL(string: "https://example.test")!)
             }
     }
 }

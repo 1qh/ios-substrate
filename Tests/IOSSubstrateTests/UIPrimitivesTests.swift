@@ -67,6 +67,17 @@ internal func `load state content accepts every product owned renderer`() {
     #expect(String(describing: type(of: view)).contains("LoadStateContent"))
 }
 
+#if canImport(UIKit)
+@Test
+@MainActor
+internal func `external url opener exposes UIKit handoff contract`() throws {
+    let url = try #require(URL(string: "https://example.test"))
+
+    _ = ExternalURLOpener.canOpen(url)
+    #expect(ExternalURLOpener.OpenOptions().isEmpty)
+}
+#endif
+
 @Test
 internal func `submit error keeps stable identity and product-owned copy`() {
     let id = UUID()
