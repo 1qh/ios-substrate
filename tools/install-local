@@ -8,5 +8,4 @@ TARGET="$SCRIPT_DIR/iosx"
 
 mkdir -p "$BINDIR"
 ln -sfn "$TARGET" "$BINDIR/iosx"
-printf 'installed %s\n' "$BINDIR/iosx"
-printf 'ensure %s is on PATH\n' "$BINDIR"
+printf 'ok\n'
