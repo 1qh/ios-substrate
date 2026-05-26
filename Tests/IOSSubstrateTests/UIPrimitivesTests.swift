@@ -1,5 +1,7 @@
 import CoreGraphics
+import Foundation
 @testable import IOSSubstrate
+import SwiftUI
 import Testing
 
 @Test
@@ -27,4 +29,15 @@ internal func `haptic feedback helpers are safe to call in tests`() {
     HapticFeedback.warning()
     HapticFeedback.error()
     HapticFeedback.selection()
+}
+
+@Test
+internal func `submit error keeps stable identity and product-owned copy`() {
+    let id = UUID()
+    let error = SubmitError(title: "Retry", message: "Network unavailable", id: id)
+
+    #expect(error.id == id)
+    #expect(error.message == "Network unavailable")
+    #expect(error == SubmitError(title: "Ignored by equality", message: "Network unavailable", id: id))
+    #expect(error != SubmitError(title: "Retry", message: "Network unavailable"))
 }

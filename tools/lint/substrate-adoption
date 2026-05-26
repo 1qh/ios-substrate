@@ -69,6 +69,17 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         re.compile(r"\b(?:enum|struct|class)\s+(?:ISO8601|ISO8601DateCodec)\b"),
         "IOSSubstrate.ISO8601DateCodec",
     ),
+
+    (
+        "local SubmitError copy",
+        re.compile(r"\b(?:struct|enum|class)\s+SubmitError\b"),
+        "IOSSubstrate.SubmitError",
+    ),
+    (
+        "local submit error alert binding",
+        re.compile(r"\bfunc\s+errorAlert\s*\(\s*_\s+\w+\s*:\s*Binding\s*<\s*SubmitError\?\s*>"),
+        "IOSSubstrate View.errorAlert",
+    ),
     (
         "local internet date formatter options",
         re.compile(r"\.withInternetDateTime\b"),
@@ -185,6 +196,12 @@ func feedback() {
 enum ISO8601 {
     static func parse(_ raw: String) -> Date? { nil }
 }
+struct SubmitError: Identifiable {
+    let id = UUID()
+}
+extension View {
+    func errorAlert(_ error: Binding<SubmitError?>) -> some View { self }
+}
 """
     good = """
 import IOSSubstrate
@@ -198,6 +215,7 @@ struct ConsumerView: View {
             .task { _ = ISO8601DateCodec.parseInternetDateTime("2026-05-26T05:30:12Z") }
             .overlay { ShimmerView().frame(height: 1) }
             .onSubmit { _ = Base64URL.decode("bWFw") }
+            .errorAlert(.constant(nil))
     }
 }
 // UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
